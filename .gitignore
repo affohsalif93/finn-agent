@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# Secrets – never commit API keys or mailbox credentials
+.env
+.env.*
+!.env.example
+
+# IDE
+.idea/
+
+# Runtime output
+out/
+*.log
