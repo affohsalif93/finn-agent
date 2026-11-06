@@ -726,15 +726,21 @@ pyproject.toml · uv.lock · README.md (DE) · NOTIZ.md (DE, 1 page)
 
 ### 13.1 Compose: the whole runtime
 ```
-image:     python:3.12-slim + uv (multi-stage, locked deps), non-root user; one image for all roles
+image:     python:3.12.16-slim-trixie + uv 0.13.7 (multi-stage, `uv sync --frozen --no-dev`),
+           non-root user, ENTRYPOINT finn; one image (finn:dev) for all roles
 services:
-  temporal      dev server (`temporal server start-dev`), SQLite on volume temporal-data,
-                7233 internal, UI 8233 bound to localhost only, healthcheck
-  finn-worker   `finn worker`   depends_on temporal (healthy), restart: unless-stopped
-  finn-poller   `finn poller`   depends_on temporal (healthy), restart: unless-stopped
+  temporal      temporalio/temporal:1.9.1 (CLI 1.9.1 = Server 1.32.0, UI 2.54.1),
+                `server start-dev --ip=0.0.0.0 --db-filename=/home/temporal/temporal.db`,
+                volume temporal-data at /home/temporal (the image runs as uid 1000 and owns
+                its home dir; a fresh /data volume would be root-owned),
+                127.0.0.1:7233 (gRPC) + 127.0.0.1:8233 (UI),
+                healthcheck `temporal operator cluster health`
+  finn-worker   `finn worker`   depends_on temporal (healthy), restart: unless-stopped, init: true
+  finn-poller   `finn poller`   depends_on temporal (healthy), restart: unless-stopped, init: true
 volumes:   ./runs (rw) · ./data/contract_profiles (ro) · ./material (ro) · temporal-data
-env_file:  .env (never baked into the image)
+env_file:  .env (optional, never baked into the image); compose sets TEMPORAL_ADDRESS=temporal:7233
 ```
+End-to-end check: `docker compose run --rm finn-worker ping` → `pong` (placeholder `PingWorkflow` until the real workflow exists). Verified: restart of Temporal (worker reconnects with backoff), `down`/`up` keeps workflow history, SIGTERM shuts down cleanly.
 No database: workflow state lives in Temporal, the audit trail in `runs/`, profiles in the repo. OpenAI and Langfuse are external.
 
 ### 13.2 Contract onboarding is a command, not a service

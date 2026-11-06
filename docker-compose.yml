@@ -1,0 +1,60 @@
+# Finn runtime: Temporal dev server + worker + poller (ARCHITECTURE.md §13).
+#   docker compose up -d                       start everything
+#   docker compose run --rm finn-worker ping   end-to-end check (prints "pong")
+#   Temporal UI: http://localhost:8233 (bound to localhost only)
+
+name: finn
+
+x-finn: &finn
+  build: .
+  image: finn:dev
+  env_file:
+    - path: .env          # secrets live here, never in the image
+      required: false     # the stack also starts without one
+  environment:
+    TEMPORAL_ADDRESS: temporal:7233
+  depends_on:
+    temporal:
+      condition: service_healthy
+  restart: unless-stopped
+  init: true              # forwards SIGTERM to finn, reaps zombies
+
+services:
+  temporal:
+    image: temporalio/temporal:1.9.1   # Temporal CLI 1.9.1 = Server 1.32.0, UI 2.54.1
+    # The image runs as user "temporal" (uid 1000). A named volume mounted at a path that exists
+    # in the image inherits its owner, so the SQLite file goes into the (temporal-owned) home dir.
+    command:
+      - server
+      - start-dev
+      - --ip=0.0.0.0
+      - --db-filename=/home/temporal/temporal.db
+    volumes:
+      - temporal-data:/home/temporal
+    ports:
+      - "127.0.0.1:7233:7233"   # gRPC frontend, for `finn` runs on the host
+      - "127.0.0.1:8233:8233"   # Web UI
+    healthcheck:
+      test: ["CMD", "temporal", "operator", "cluster", "health", "--address", "127.0.0.1:7233"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    restart: unless-stopped
+
+  finn-worker:
+    <<: *finn
+    command: ["worker"]
+    volumes:
+      - ./runs:/app/runs
+      - ./data/contract_profiles:/app/data/contract_profiles:ro
+      - ./material:/app/material:ro
+
+  finn-poller:
+    <<: *finn
+    command: ["poller"]
+    volumes:
+      - ./runs:/app/runs
+
+volumes:
+  temporal-data:

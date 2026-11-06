@@ -1,0 +1,32 @@
+# Only pyproject.toml, uv.lock and src/ are needed in the build context.
+.git
+.gitignore
+.gitattributes
+.venv
+.idea
+.vscode
+.claude
+__pycache__
+*.py[cod]
+.pytest_cache
+.ruff_cache
+.mypy_cache
+
+# Secrets: never in the image (compose passes .env at runtime)
+.env
+.env.*
+
+# Runtime data and inputs: mounted as volumes, not copied
+runs
+out
+material
+data
+*.log
+
+# Docs and other non-runtime files
+docs
+*.pdf
+*.md
+tests
+Dockerfile
+docker-compose.yml
