@@ -13,6 +13,10 @@ __pycache__/
 # IDE
 .idea/
 
+# Agent skills (third-party copies; restore from skills-lock.json with `npx skills experimental_install`)
+.claude/
+.agents/
+
 # Runtime output (runs/ contains mail content)
 out/
 runs/
