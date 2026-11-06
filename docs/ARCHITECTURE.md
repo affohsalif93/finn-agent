@@ -116,79 +116,170 @@ RunRecord:        run_id = workflow ID; all of the above → runs/<id>/
 - `Finding` is the **one** error type for everything; reply header, run folder and tests read the same list.
 - `CovenantResult.components` carries the cells and contract sources → "source of every number" in the mail.
 
-## 3. Contract profile schema
+## 3. Contract profile schema (v2)
+
+One JSON file per contract in `data/contract_profiles/`. Checked against all four contracts (Nov 2026); every key below exists because at least one contract needs it. Amounts are **strings** holding exact decimals (also for Temporal serialisation); contract amounts in EUR, plan values in T€.
+
+### 3.1 Structure
+
+| Section | Content | Needed for |
+|---|---|---|
+| `document`, `parties`, `amount_eur` | file, sha256, pages; lender (for syndicates: agent + members), borrower | hash check, company check |
+| `accounting_basis` | `standard: HGB`, `entity: single`, frozen accounting methods (source) | INFO; group covenants would need group figures |
+| `sources[]` | `{id, page, section, quote}`, verbatim | quote check (D4); every component, threshold and clause references a `source_id` |
+| `loans[]` | `loan_id`, `match` (loan number first, then label patterns), `tranches[]`, `repayment_schedule[]` | linking the contract to loan-schedule rows; `PLAN_REPAYMENT_DIFFERS`, `PLAN_CONTRACT_NO_LOAN` |
+| `conditions{}` | contract-defined conditions with criteria, e.g. what counts as a subordinated shareholder loan | recipe `exclude_if` / `only_if`; checked against plan facts |
+| `definitions{}` | the contract's defined terms as named recipes (EBITDA, Finanzverbindlichkeiten, Schuldendienst, …) with `exclusions[]` and `clarifications[]` | the evaluator; calculation path; extraction review |
+| `covenants[]` | metric, numerator / denominator (refs to definitions or items), operator, `thresholds[]`, unit, rounding, `test`, `plan_check`, `breach_consequence`, `cure`, `unmapped_components` | calculation and reply |
+| `pricing_grid` | margin steps with bounds, initial margin, effective timing; `is_covenant: false` | note in the reply (V4 margin step) |
+| `examples[]` | sample calculations printed in the contract, with inputs and expected result | `finn contracts check` runs the recipe on them (`PROFILE_EXAMPLE_MISMATCH`) |
+| `dismissed_mentions[]` | numeric or covenant-like text that is **not** a financial covenant, with `category` and reason | completeness scan (D4); V1 "keine Covenants" note |
+| `label_hints{}` | contract hints for finding a building block in the plan ("Netzanschlusskostenbeiträge" = Sonderposten) | plan reader synonyms |
+| `review`, `extraction` | `{status: draft\|reviewed, reviewed_by, reviewed_at, notes}`; `{model, prompt_version, extracted_at, source_sha256}` | only `reviewed` profiles are used without a warning (D2) |
+
+Invariant (validator): `has_financial_covenants == (len(covenants) > 0)`; if false, `no_covenant_reason` with a `source_id` is required.
+
+### 3.2 Example: V4 syndicated loan (abridged, real values)
 
 ```jsonc
 {
-  "contract_id": "V4", "file": "Vertrag_4_Konsortialkredit.pdf", "sha256": "…",
-  "schema_version": 1,
-  "lender": "Weserland Bank AG (Agent)", "borrower": "Stadtwerke Musterstadt GmbH",
-  "loan_number": null, "amount_eur": "64000000.00",
-  "has_financial_covenants": true,
-  "dismissed_mentions": [
-    {"page": 4, "section": "§ 6 Abs. 3", "quote": "…Margenraster…", "reason": "pricing only, § 6 Abs. 4"}
-  ],
-  "covenants": [{
-    "covenant_id": "V4-DVG",
-    "metric_type": "net_debt_to_ebitda",          // label + type-specific extras: equity_ratio | net_debt_to_ebitda | dscr
-    "name_in_contract": "Dynamischer Verschuldungsgrad",
-    "operator": "<=", "threshold": "3.50", "unit": "ratio",   // ratio | percent | amount (T€)
-    "test_date": "annual, 31.12.",
-    "rounding": {"decimals": 2, "method": "half_up"},
-    "recipe": {                                   // see 3.1
-      "numerator": [
-        {"item": "bank_debt", "weight": "1", "source": "§ 1, p. 2"},
-        {"item": "shareholder_loan", "weight": "1", "exclude_if": "qualified_subordination", "source": "§ 1, p. 2"},
-        {"item": "cash", "weight": "-1", "only_if": "cash_freely_available", "source": "§ 1, p. 3"}
+  "contract_id": "V4", "schema_version": 2,
+  "document": {"file": "Vertrag_4_Konsortialkredit.pdf", "sha256": "…", "pages": 13, "date": "2023-11-30"},
+  "parties": {"lender": "Weserland Bank AG (Agent)",
+              "lender_members": ["Weserland Bank AG", "Volksbank Musterregion eG", "Sparkasse Musterstadt"],
+              "borrower": "Stadtwerke Musterstadt GmbH"},
+  "amount_eur": "64000000.00",
+  "accounting_basis": {"standard": "HGB", "entity": "single", "frozen_methods_source_id": "S_GAAP"},   // § 1 (2): as for FY 2022
+
+  "loans": [{"loan_id": "V4",
+             "match": {"loan_number": null, "label_patterns": ["Konsortialkredit", "Weserland"]},
+             "repayment_schedule": [{"date": "2027-11-30", "amount_eur": "3000000.00"}],   // Anlage 2, excerpt
+             "source_id": "S_TILG"}],
+
+  "conditions": {
+    "subordinated_shareholder_loan": {
+      "criteria": ["qualified subordination § 39 (2) InsO towards the lenders",
+                   "interest and repayment only from free assets / balance-sheet profit"],
+      "plan_fact": "qualified_subordination", "source_id": "S_NGD"},                 // § 1 p. 2–3
+    "cash_freely_available": {
+      "criteria": ["free to use", "not pledged or encumbered with third-party rights"],
+      "plan_fact": "cash_freely_available", "source_id": "S_LM"}
+  },
+
+  "definitions": {
+    "ebitda": {
+      "components": [
+        {"item": "net_income", "weight": "1", "source_id": "S_EBITDA"},
+        {"item": "income_taxes", "weight": "1", "source_id": "S_EBITDA"},
+        {"item": "interest_expense", "weight": "1", "source_id": "S_EBITDA"},
+        {"item": "interest_income", "weight": "-1", "source_id": "S_EBITDA"},
+        {"item": "depreciation", "weight": "1", "source_id": "S_EBITDA"},
+        {"item": "extraordinary_items", "weight": "1", "if_missing": "assume_zero_info", "source_id": "S_EBITDA"}
       ],
-      "denominator": [ {"item": "ebitda", "weight": "1", "source": "§ 1, p. 2"} ],
-      "if_subitem_not_shown": "partial"           // partial | assume_zero_warn
+      "clarifications": [{"text": "Erträge aus der Auflösung von Sonderposten werden nicht bereinigt", "source_id": "S_EBITDA"}]
     },
-    "sources": [ {"role": "covenant|definition|rounding|plan_basis", "page": 7, "section": "§ 14 Abs. 1 lit. b", "quote": "…"} ],
-    "related_clauses": [ {"type": "plan_basis_not_default|cure|no_cure|pricing_only", "page": 7, "section": "§ 14 Abs. 3", "quote": "…"} ],
-    "unmapped_components": [],                     // non-empty → not calculated, manual review
-    "confidence": "high"
-  }]
+    "financial_debt": {
+      "components": [
+        {"item": "bank_debt", "weight": "1", "source_id": "S_FV"},                                   // (a) loans
+        {"item": "shareholder_loan", "weight": "1", "exclude_if": "subordinated_shareholder_loan", "source_id": "S_FV"},
+        {"item": "bonds", "weight": "1", "if_missing": "assume_zero_warn", "source_id": "S_FV"},     // (b)
+        {"item": "finance_leases", "weight": "1", "if_missing": "assume_zero_warn", "source_id": "S_FV"},  // (c)
+        {"item": "recourse_factoring", "weight": "1", "if_missing": "assume_zero_warn", "source_id": "S_FV"}  // (d)
+      ],
+      "unmapped_components": [{"text": "(e) sonstige Geschäfte mit der wirtschaftlichen Wirkung einer Kreditaufnahme",
+                               "handling": "not in plan; stated as assumption", "source_id": "S_FV"}]
+    },
+    "net_financial_debt": {"components": [
+      {"ref": "financial_debt", "weight": "1"},
+      {"item": "cash", "weight": "-1", "only_if": "cash_freely_available", "source_id": "S_NFV"}]},
+    "equity": {
+      "components": [{"item": "equity", "weight": "1", "source_id": "S_EK"}],
+      "exclusions": [{"text": "Sonderposten, Rückstellungen und Gesellschafterdarlehen, auch mit Rangrücktritt", "source_id": "S_EK"}]
+    }
+  },
+
+  "covenants": [{
+    "covenant_id": "V4-DVG", "metric_type": "net_debt_to_ebitda", "name_in_contract": "Dynamischer Verschuldungsgrad",
+    "numerator": [{"ref": "net_financial_debt"}], "denominator": [{"ref": "ebitda"}],
+    "operator": "<=", "thresholds": [{"from_year": 2023, "value": "3.50"}], "unit": "ratio",
+    "rounding": {"decimals": 2, "method": "half_up", "source_id": "S_RUND"},              // § 14 (2)
+    "test": {"frequency": "annual", "date": "12-31", "basis": "annual_accounts", "first_test": "2023-12-31", "source_id": "S_COV_B"},
+    "plan_check": {"applies": true, "consequence": "early_warning_only",
+                   "plan_basis": ["planbilanz", "erfolgsplan"], "plan_status_required": null,
+                   "actions": [{"type": "talks_on_request", "by": "majority_lenders", "source_id": "S_PLAN"}]},   // § 14 (3)
+    "breach_consequence": {"type": "event_of_default", "source_id": "S_KG"},                // § 16 (1) b
+    "cure": {"allowed": false, "source_id": "S_CURE"},                                    // § 14 (4)
+    "source_id": "S_COV_B", "unmapped_components": []
+  }],
+
+  "pricing_grid": {"metric_ref": "V4-DVG", "is_covenant": false, "initial_margin_pct": "1.10",
+                   "effective_from": "interest period after receipt of the compliance certificate",
+                   "steps": [{"upper": "2.50", "upper_inclusive": true, "margin_pct": "0.95"},
+                             {"upper": "3.00", "upper_inclusive": true, "margin_pct": "1.10"},
+                             {"upper": null, "margin_pct": "1.25"}],
+                   "source_id": "S_MARGE"},                                               // § 6 (3), (4)
+
+  "examples": [],
+  "dismissed_mentions": [
+    {"source_id": "S_MARGE", "category": "pricing", "reason": "Margenraster dient nur der Preisbestimmung (§ 6 Abs. 4)"},
+    {"source_id": "S_VERAEUSS", "category": "general_undertaking", "reason": "Veräußerungsgrenze 7,5 % der Bilanzsumme (§ 15 Abs. 4)"},
+    {"source_id": "S_DRITTV", "category": "general_undertaking", "reason": "Drittverzug ab EUR 5 Mio. (§ 16 Abs. 1 lit. e)"}
+  ],
+  "label_hints": {},
+  "review": {"status": "reviewed", "reviewed_by": "…", "reviewed_at": "…"},
+  "extraction": {"model": "…", "prompt_version": "v1", "extracted_at": "…", "source_sha256": "…"}
 }
 ```
-Thresholds and amounts are **strings** holding exact decimals (also for Temporal serialisation).
+`S_*` source IDs stand for entries in `sources[]` (verbatim quotes, omitted here).
 
-### 3.1 Recipes (D5)
+### 3.3 Recipes (D5)
 
-The **shape** of a covenant is standard (a ratio, or an amount, compared with a threshold). **What goes into it** is defined by the contract wording. A recipe states which building blocks (§4.1) enter the numerator / denominator, with which weight and under which condition.
+The **shape** of a covenant is standard (a ratio compared with a threshold). **What goes into it** is defined by the contract wording: the covenant's numerator / denominator reference the contract's own `definitions`, which combine building blocks (§4.1) with weights and conditions.
 
 | Covenant | Numerator | Denominator | Result (answer key) |
 |---|---|---|---|
-| V2 economic equity ratio (%) | `equity` + **0.5 ×** `sonderposten` (shareholder loans never) | `total_assets` | 34.32 % |
-| V3 DSCR | `ebitda` − `income_taxes` | `interest_expense` − `pension_unwinding` + `scheduled_repayments_total` (all loans **incl.** shareholder loan; special repayments are a separate block and not used) | 1.56 |
-| V4 equity ratio (%) | `equity` | `total_assets` | 30.7 % |
-| V4 dynamic leverage | `bank_debt` + `shareholder_loan` **excluded if** `qualified_subordination` − `cash` **only if** `cash_freely_available` | `ebitda` | 3.37 |
-| `ebitda` (sub-recipe, V3 Anlage 3 / V4 § 1) | `net_income` + `income_taxes` + `interest_expense` − `interest_income` + `depreciation` (± `extraordinary_items` if shown) | – | 40,200 |
+| V2 economic equity ratio (%) | `equity` (net of called, unpaid capital, `if_missing: assume_zero_info`) + **0.5 ×** `sonderposten`; excluded: shareholder loans, provisions, other debt, even with subordination (§ 1) | `total_assets` | 34.32 % |
+| V3 DSCR | `ebitda` (Anlage 3 (2)) − `income_taxes` (Anlage 3 (5)) | `interest_on_financial_debt` (loan schedule, excl. provision unwinding) + scheduled repayments on all financial debt **incl.** shareholder loan, excl. special / early / refinancing repayments and refinanced bullets (Anlage 3 (4)) | 1.56 |
+| V4 equity ratio (%) | `equity`; excluded: Sonderposten, provisions, shareholder loans (§ 1) | `total_assets` | 30.7 % |
+| V4 dynamic leverage | `net_financial_debt` = `financial_debt` (shareholder loan **excluded if** `subordinated_shareholder_loan`; bonds / leasing / factoring `assume_zero_warn`) − `cash` **only if** `cash_freely_available` | `ebitda` (§ 1) | 3.37 |
 
-**Whitelist** (the only things a recipe may use; validated at onboarding, D23):
-- items: the building blocks of §4.1 and named sub-recipes (`ebitda`);
-- weights: decimal strings (`"1"`, `"-1"`, `"0.5"`);
-- conditions: `exclude_if` / `only_if` with a plan fact (§4.1);
-- one division, contract rounding, one comparison.
+**Component fields:** `item` (building block) or `ref` (definition) · `weight` (decimal string) · `exclude_if` / `only_if` (a contract `condition`) · `if_missing`: `partial` (default: covenant not computable) | `assume_zero_warn` | `assume_zero_info` · `loan_filters` (repayment components: `exclude_special_repayments`, `exclude_refinancing`, `exclude_bullet_if_refinanced`) · `source_id`.
 
-Anything the whitelist cannot express goes to `unmapped_components` → `manual_review`, no number (D5).
+**Whitelist** (validated at onboarding, D23): building blocks of §4.1, definitions of the same contract (no cycles), contract conditions mapped to known plan facts, decimal weights, one division, contract rounding, one comparison. Anything else → `unmapped_components` → `manual_review` (or, for a sub-item the plan cannot show, a stated assumption).
 
 **Where plan and contract don't match one-to-one:**
 
 | Mismatch | Example | Handling |
 |---|---|---|
-| one contract term = several plan lines | "Finanzverbindlichkeiten" = bank loans + shareholder loan (+ leasing) | several components |
-| partial weight | 50 % of Sonderposten | weight |
-| conditional inclusion | shareholder loan out if subordinated | condition, decided by code from a plan fact, evidence recorded |
-| exclusion of a sub-item | interest without pension unwinding; repayments without special repayments | negative component / separate block, if the plan shows the sub-item |
-| sub-item not shown in the plan | no "davon Aufzinsung" line | per recipe: `partial` (not computable) or `assume_zero_warn` (`PLAN_SUBITEM_NOT_SHOWN`) |
-| contract term with no plan counterpart | leasing, guarantees, cash pool | marked in the profile; absent in the plan → WARN "nicht ausgewiesen, mit 0 angesetzt" (`PLAN_ITEM_NOT_IN_PLAN`); never silently dropped |
-| definition outside the whitelist | "EBITDA bereinigt um Einmaleffekte nach Ermessen der Bank" | `unmapped_components` → manual review |
-| rules around the formula | rounding, ≥ / ≤, test date, plan basis | profile fields |
+| one contract term = several plan lines | "Finanzverbindlichkeiten" (a)–(e) | several components |
+| partial weight | 50 % of Sonderposten (V2) | weight |
+| conditional inclusion | shareholder loan out if subordinated (V4, two criteria) | contract `condition`; code checks each criterion against plan notes; evidence recorded |
+| unconditional inclusion that looks like a trap | V3: shareholder loans "unabhängig davon, ob … Rangrücktritt" | plain component + clarification |
+| exclusion of a sub-item | interest without provision unwinding (V3); repayments without special repayments | separate building block (`interest_on_financial_debt` from the loan schedule) / `loan_filters` |
+| component the plan doesn't show | bonds, leasing, factoring (V3, V4); called unpaid capital (V2) | `if_missing: assume_zero_warn` → "im Plan nicht ausgewiesen, mit 0 angesetzt" (`PLAN_ITEM_NOT_IN_PLAN`) |
+| sub-item not shown separately | no "davon Aufzinsung" line | per component: `partial` or `assume_zero_warn` (`PLAN_SUBITEM_NOT_SHOWN`) |
+| bullet payment in the plan year | V3 excludes refinanced bullets | WARN `PLAN_BULLET_IN_PLAN_YEAR` unless a plan note rules out refinancing (note 4 does for the old loans) |
+| definition outside the whitelist | "(e) sonstige Geschäfte mit Wirkung einer Kreditaufnahme" | `unmapped_components` with handling text |
+| rules around the formula | rounding, ≥ / ≤, test date, plan basis, plan status, cure | profile fields |
+
+### 3.4 What differs between the four contracts (checked)
+
+| | V1 Sparkasse | V2 Förderbank | V3 Landesbank | V4 Syndicated |
+|---|---|---|---|---|
+| Financial covenants | none (preamble figures = 2019, `historical_figure`) | economic equity ratio ≥ 27.5 % | DSCR ≥ 1.30 | equity ratio ≥ 30.0 %; leverage ≤ 3.50 |
+| Definitions in | – | § 1 | Anlage 3 | § 1 |
+| Rounding | – | none → 2 dp, flagged | 2 dp half-up | 1 dp / 2 dp half-up |
+| Plan basis / status | – | Planbilanz; **approved** plan by 31 Jan | Erfolgsplan + Darlehensspiegel; draft OK by 15 Dec | Planbilanz + Erfolgsplan; by 31 Dec |
+| Plan shortfall → | – | talks; notify bank immediately (§ 12 (3)) | measures within 30 days (§ 13 (3)) | talks on request (§ 14 (3)) |
+| Binding breach → | – | collateral demand, termination if not provided in 60 days | termination; **cure** by equity injection added to the numerator, ≤ 2×, not consecutive, within 30 days | event of default, **no cure** |
+| Loan match | Nr. 4471 203 118 | Nr. FD-2022-08817 | Nr. LBM-INV-2025-0412 (tranches A, B) | "Konsortialkredit" / agent (Sparkasse is also a member!) |
+| Contract example | – | – | Anlage 3 (8): → 1.54 | – |
+| Dismissed numerics | preamble ratios; disposals 10 % fixed assets | disposals 10 % | disposals 10 %; Tranche B condition (DSCR 2025) | margin grid; disposals 7.5 % total assets; negative pledge / cross default EUR 5 M |
+| Plan repayment 2027 vs. contract | (check vs. Anlage 1) | 1,500 = 4 × 375 ✓ | 3,000 = 4 × 750 (Tranche A) ✓ | 3,000 ✓ |
 
 ## 4. Plan reader (D6)
 
-The reader is **contract-neutral**: it delivers **building blocks** (§4.1) at the finest level any contract needs, plus **plan facts**. It does not know about covenants; the recipes (§3.1) combine the blocks. The required blocks are the union over all recipes, so a missing block affects only the covenants that use it (PARTIAL).
+The reader is **contract-neutral**: it delivers **building blocks** (§4.1) at the finest level any contract needs, plus **plan facts**. It does not know about covenants; the recipes (§3.3) combine the blocks. The required blocks are the union over all recipes, so a missing block affects only the covenants that use it (PARTIAL).
 
 Mapping = finding the cell for each building block, in three steps:
 
@@ -216,14 +307,15 @@ Mapping = finding the cell for each building block, in three steps:
 | Statement | Building blocks (`ItemKey`) | Sample plan |
 |---|---|---|
 | GuV | `net_income` · `income_taxes` · `interest_expense` · `pension_unwinding` · `interest_income` · `depreciation` · `extraordinary_items` (optional) | GuV D-column |
-| Bilanz | `total_assets` · `total_equity_liabilities` (balance check) · `equity` · `sonderposten` · `bank_debt` · `shareholder_loan` · `cash` | Bilanz D12–D29 |
-| Finanzierung | per loan a `LoanLine` (opening, drawdown, scheduled / special repayment, closing, interest) → `scheduled_repayments_total`, `special_repayments_total`, `total_bank_debt` | rows 5–9, 13 |
+| Bilanz | `total_assets` · `total_equity_liabilities` (balance check) · `equity` · `sonderposten` · `bank_debt` · `shareholder_loan` · `cash` · optional, usually absent: `called_unpaid_capital`, `bonds`, `finance_leases`, `recourse_factoring` | Bilanz D12–D29 |
+| Finanzierung | per loan a `LoanLine` (label, loan number, opening, drawdown, scheduled / special repayment, closing, interest) → `scheduled_repayments_total`, `special_repayments_total`, `total_bank_debt`, `interest_on_financial_debt` (sum of per-loan interest, excl. provision unwinding; tie-out: GuV interest − unwinding) | rows 5–9, 13; G15 = 4,930 |
 | Cover | company, plan year, reporting date, status, version date | Deckblatt |
 
 | Plan fact (`FactKey`) | Decided by | Sample plan |
 |---|---|---|
-| `qualified_subordination` (shareholder loan) | **code**: pattern rules on note text ("Rangrücktritt" + "§ 39 Abs. 2 InsO" / "qualifiziert"); ambiguous → WARN `PLAN_FACT_AMBIGUOUS` + stated assumption | Bilanz note 2 → true |
+| `qualified_subordination` (shareholder loan; criteria come from the contract's `conditions`, §3.1) | **code**: pattern rules on note text ("Rangrücktritt" + "§ 39 Abs. 2 InsO" / "qualifiziert"); ambiguous → WARN `PLAN_FACT_AMBIGUOUS` + stated assumption | Bilanz note 2 → true |
 | `cash_freely_available` | code: pattern rules ("frei verfügbar", no "verpfändet/gesperrt") | Bilanz note 3 → true |
+| per loan: `bullet_in_plan_year`, `refinanced` | code: schedule (closing = 0 with large repayment) + note patterns ("keine Endfälligkeit, keine Refinanzierung") | Finanzierung note 4 → old loans: no bullet, no refinancing |
 
 - Every value is a `PlanValue` with normalised value, cell, label and original unit; every fact a `PlanFact` with evidence.
 - Sums over loans (`scheduled_repayments_total`, …) keep `derived_from` with every cell used.
@@ -294,7 +386,7 @@ def evaluate(recipe, blocks, facts) -> Evaluation:
                 used.append(Excluded(c, evidence=facts[c.exclude_if].evidence)); continue
             if c.only_if and not facts[c.only_if].value:
                 used.append(Excluded(c, evidence=facts[c.only_if].evidence)); continue
-            v = blocks[c.item]                      # PlanValue (or evaluated sub-recipe, e.g. ebitda)
+            v = resolve(c, blocks, definitions)     # building block (PlanValue) or ref → contract definition, evaluated recursively
             total += Decimal(c.weight) * v.value
             used.append(Used(c, v))
         return total, used
@@ -307,6 +399,7 @@ def evaluate(recipe, blocks, facts) -> Evaluation:
     met = compare(rounded, recipe.operator, Decimal(recipe.threshold))
     return Evaluation(raw, rounded, met, headroom(rounded, recipe), num_used, den_used)
 ```
+- `ref` components resolve to the **contract's own** definitions (§3.1), so V3 and V4 can define EBITDA differently; `if_missing` and `loan_filters` are applied per component.
 - Pure functions, no I/O, no LLM. `Decimal` throughout; contract rounding (`ROUND_HALF_UP`); none specified → 2 decimals, flagged (`CALC_NO_ROUNDING_RULE`).
 - Comparison uses the **rounded** value, as the contracts specify.
 - The `used` list is the calculation path in the mail; `formula_de` is generated from the same list, so what is shown is exactly what was computed.

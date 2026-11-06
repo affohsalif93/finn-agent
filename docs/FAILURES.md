@@ -108,9 +108,12 @@ Code checks these after the intent classification; anything missing → `ASK`.
 | `PLAN_LOAN_NO_CONTRACT` | loan in plan without a contract | loan IDs vs. profiles | INFO | "Darlehen X ohne Vertrag im Vertragsordner." | ✅ | `plan_extra_loan.xlsx` |
 | `PLAN_CONTRACT_NO_LOAN` | contract without loan in the plan | profiles vs. loan IDs | WARN | "Vertrag 3 fehlt im Darlehensspiegel." | ✅ | `plan_missing_loan.xlsx` |
 | `PLAN_REPAYMENT_DIFFERS` | scheduled repayment ≠ contract schedule | profile vs. plan | WARN | – | ✅ | `plan_repayment_off.xlsx` |
+| `PLAN_BULLET_IN_PLAN_YEAR` | a loan is due in full (bullet) in the plan year; the contract excludes refinanced bullets (V3 Anlage 3 (4)) | closing balance 0 with a large repayment; no plan note ruling out refinancing | include as scheduled; WARN with the alternative result | "Darlehen X endfällig 2027; falls refiniert, ist die Tilgung nicht einzubeziehen (DSCR dann …)." | ✅ | `plan_bullet.xlsx` |
 | `PLAN_SIGNS` | expenses positive / mixed signs | section convention | normalise; WARN | "Vorzeichen vereinheitlicht." | ✅ | `plan_signs.xlsx` |
 | `PLAN_IMPLAUSIBLE` | negative equity, EBITDA ≤ 0 | value checks | compute; flag; EBITDA ≤ 0 → leverage not meaningful (PARTIAL) | "EBITDA ≤ 0: Verschuldungsgrad nicht sinnvoll definiert." | ✅ | `plan_negative_ebitda.xlsx` |
 | `PLAN_STATUS` | draft vs. approved | cover sheet | INFO | "Entwurf vom 15.10.2026, nicht vom Aufsichtsrat genehmigt." | ✅ | sample plan |
+| `PLAN_STATUS_REQUIRED` | the contract requires an approved plan, the file is a draft (V2 § 12 (1) c) | profile `plan_status_required` vs. cover sheet | compute; INFO per contract | "Hinweis: Die Förderbank verlangt den beschlossenen Wirtschaftsplan; der vorliegende Plan ist ein Entwurf." | ✅ | sample plan |
+| `PLAN_LOAN_AMBIGUOUS` | a loan-schedule row matches several contracts (e.g. lender name "Sparkasse" in V1 and the V4 syndicate) | `loans[].match`, loan number first | match by loan number; still ambiguous → WARN, repayment check skipped for that loan | "Darlehenszeile … nicht eindeutig einem Vertrag zuzuordnen." | ✅ | `plan_no_loan_numbers.xlsx` |
 
 ## G. Contracts and profiles
 
@@ -119,6 +122,9 @@ Code checks these after the intent classification; anything missing → `ASK`.
 | `CONTRACT_CHANGED` | contract file hash ≠ profile hash | hash at start | compute with the old profile; WARN | "Vertrag 4 wurde geändert; Profil nicht neu geprüft." | ✅ | test only |
 | `PROFILE_MISSING` | no / invalid profile | load + schema validation | that contract "nicht geprüft"; others continue | "Vertrag X konnte nicht geprüft werden." | ✅ | test only |
 | `PROFILE_INVALID_RECIPE` | recipe uses an item / condition / operation outside the whitelist | validation at onboarding and at load | that covenant `manual_review` | "Covenant … kann nicht automatisch berechnet werden." | ✅ | test profile |
+| `PROFILE_EXAMPLE_MISMATCH` | the recipe applied to the contract's own sample calculation doesn't give the printed result (V3 Anlage 3 (8): 1.54) | `finn contracts check` | profile stays `draft`; review required | (onboarding only, no mail) | ✅ | test profile |
+| `PROFILE_INVARIANT` | `has_financial_covenants` disagrees with `covenants[]`, or `no_covenant_reason` missing | schema validator | profile rejected | (onboarding only) | ✅ | test profile |
+| `PROFILE_NOT_REVIEWED` | profile `review.status = draft` used at runtime | load | compute; WARN | "Vertragsprofil V… ist noch nicht fachlich geprüft." | ✅ | test profile |
 | `PROFILE_UNMAPPED` | `unmapped_components` non-empty | profile | that covenant "manuelle Prüfung" | "Covenant … enthält Bestandteile, die ich nicht automatisch abbilde: …" | ✅ | test profile |
 | `CONTRACT_NEW_FILE` | contract in the folder without a profile | folder scan | WARN; product: start onboarding | "Neuer Vertrag ohne geprüftes Profil: …" | ✅ detect | test only |
 
