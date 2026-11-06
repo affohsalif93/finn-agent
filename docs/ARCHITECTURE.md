@@ -58,7 +58,7 @@ InboundMessage ─parse_message─► ParsedMessage ─classify_intent─► Req
                                                   │
    ContractProfile[] ─────────── calculate ───────┤
                                                   ▼
-                                         list[CovenantResult]
+                            Report (results + findings + notes, §6.4)
                                                   │ render_reply
                                                   ▼
                                     ReplyDraft ─send_reply─► SentRecord
@@ -441,15 +441,86 @@ Each intent has an **input contract** (required / optional inputs), checked by c
 
 Thread identity: `In-Reply-To` / `References`, subject (`AW:`/`Re:`) as fallback.
 
-### 6.4 Reply structure (German, HTML + plain text)
-1. Header: checked input (file, company, plan year, status, hash) and any warnings at the top
-2. Summary: overall result, tightest covenant, sensitivity sentence, "Frühwarnung auf Planbasis"
-3. Table: contract · covenant · Plan 2027 · threshold · headroom · met
-4. Calculation path per covenant: contract source (page/§ + quote), formula, inputs with cells, result
-5. Notes: contract without covenants (and why), V4 margin step, related clauses (cure / no cure)
-6. Signature + "Alle Kennzahlen stammen aus deterministischem Code, nicht aus dem Sprachmodell."
+### 6.4 Calculate and report
 
-The LLM writes text around **placeholders filled by code**; afterwards code verifies that every number in the mail equals the result. If the LLM is unavailable → a fixed German template (D16).
+**`calculate` activity** (pure code, no retries, milliseconds):
+```
+for each contract profile (filtered by Request.contract_filter, if any):
+    no covenants                   → ContractNote ("keine Financial Covenants", reason + source)
+    for each covenant:
+        BLOCK finding affects it   → not_computable (reason = the finding)
+        unmapped / invalid recipe  → manual_review
+        else evaluate(recipe, blocks, facts) → CovenantResult + tight flag + sensitivity
+→ Report
+```
+```python
+Report: header: CheckedInput        # file, sha256, company, plan year, status, version date, reporting date, profile hashes
+        findings: list[Finding]     # WARN/INFO shown at the top
+        results: list[CovenantResult]
+        contract_notes: list[ContractNote]   # V1 no covenants, V4 margin step, cure / no cure
+        overall: all_met | some_breached | incomplete
+        tightest: covenant_id | None
+```
+
+**`render_reply` activity: code builds the mail, the LLM only polishes it.**
+1. Code fills a German template (Jinja2) from the `Report`: table, numbers, sources and calculation paths. **This alone is a complete, correct mail.**
+2. The LLM may rewrite only the prose parts (summary, notes). It sees placeholders, not numbers (D21).
+3. Number check: every number in the final text must occur in the `Report`; otherwise the plain template is used (`REPLY_NUMBER_MISMATCH`). LLM unavailable → plain template (`REPLY_LLM_UNAVAILABLE`, D16).
+4. `send_reply`: reply in the thread (`AW:` subject, `In-Reply-To` / `References`), multipart HTML + plain text, deterministic Message-ID, idempotent (§7.3).
+
+**Mail structure (German, formal "Sie"):**
+1. **Checked input:** file, company, plan year, status (draft/approved), reporting date; warnings directly below.
+2. **Summary:** overall result, tightest covenant, sensitivity sentence (rounding-aware, D15), "Frühwarnung auf Planbasis, kein Vertragsbruch".
+3. **Table:** contract · covenant · Plan 2027 · threshold · headroom (PP for percentages) · met (ja / ja (knapp) / nein / nicht berechenbar / manuelle Prüfung).
+4. **Calculation path per covenant** (D14), below the table: contract source (§, page, quote), formula with values and cells, raw and rounded value, excluded components with the reason and evidence.
+5. **Notes:** contract without covenants (and why), V4 margin step (pricing, not a covenant), related clauses (cure / no cure).
+6. **Footer:** "Alle Kennzahlen wurden deterministisch berechnet, nicht vom Sprachmodell." · reference = run ID.
+
+**Example (abridged):**
+```
+Betreff: AW: Covenant-Prüfung Wirtschaftsplan 2027
+
+Geprüfte Eingabe: Wirtschaftsplan_2027.xlsx · Stadtwerke Musterstadt GmbH · Plan 2027
+(Entwurf vom 15.10.2026) · Stichtag 31.12.2027 · alle Eingangsprüfungen bestanden
+
+Ergebnis: Auf Basis des Plans werden alle 4 Financial Covenants eingehalten.
+Am engsten: Dynamischer Verschuldungsgrad (Konsortialkredit) mit 3,37 bei max. 3,50.
+[Sensitivitätssatz, von Code berechnet]
+Hinweis: Frühwarnung auf Planbasis, kein Vertragsbruch (maßgeblich ist der Jahresabschluss).
+
+| Vertrag            | Covenant                   | Plan 2027 | Grenze   | Spielraum | Erfüllt    |
+| 2 Förderbank       | Wirtsch. Eigenkapitalquote | 34,32 %   | ≥ 27,5 % | 6,82 PP   | ja         |
+| 3 Landesbank       | DSCR                       | 1,56      | ≥ 1,30   | 0,26      | ja         |
+| 4 Konsortialkredit | Eigenkapitalquote          | 30,7 %    | ≥ 30,0 % | 0,7 PP    | ja (knapp) |
+| 4 Konsortialkredit | Dyn. Verschuldungsgrad     | 3,37      | ≤ 3,50   | 0,13      | ja (knapp) |
+
+Rechenweg
+4 · Dynamischer Verschuldungsgrad (§ 14 Abs. 1 lit. b, S. 7; Definition § 1, S. 2–3)
+  (Bankverbindlichkeiten 148.200 [Bilanz!D28] − liquide Mittel 12.600 [Bilanz!D12])
+  / EBITDA 40.200 [GuV, 5 Zellen] = 3,3731 → gerundet 3,37
+  Gesellschafterdarlehen 8.000 [Bilanz!D29] nicht enthalten: qualifizierter Rangrücktritt
+  (Bilanz Anm. 2); § 1, S. 2 „…"
+
+Hinweise
+- Vertrag 1 (Sparkasse): keine Financial Covenants; die Kennzahlen der Präambel beschreiben die Lage 2019.
+- Konsortialkredit: 3,37 > 3,00 → höchste Margenstufe (§ 6 Abs. 3), kein Covenant.
+- Konsortialkredit: keine Heilung durch Eigenkapitalzuführung (§ 14 Abs. 4).
+
+Alle Kennzahlen wurden deterministisch berechnet, nicht vom Sprachmodell.
+Finn · Referenz: <run-id>
+```
+
+**Variants and format decisions:**
+
+| Case | Mail |
+|---|---|
+| BLOCK | short template: what is wrong, which cell / file, what to send; no table |
+| ASK | short template: what is missing; the workflow waits (§7.1) |
+| PARTIAL | full mail; affected covenants stay in the table as "nicht berechenbar" with the reason |
+| HTML | inline CSS, simple tables (Outlook-safe), no JavaScript, no images; plain-text part with the same content |
+| Attachment | optional `ergebnis.json` with all values, cells and sources (audit); no PDF (not required) |
+
+Open (decided during implementation): exact HTML layout, aligned with `material/Demo_Finn_Covenant-Pruefung.html`; whether to attach `ergebnis.json`.
 
 ## 7. Orchestration with Temporal (D9)
 
