@@ -1,4 +1,4 @@
-"""structlog setup. stdlib logging (Temporal SDK, workflow.logger) goes through the same renderer."""
+"""structlog setup. stdlib logging (Temporal SDK, workflow.logger) uses the same renderer."""
 
 import logging
 import sys

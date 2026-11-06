@@ -1,6 +1,7 @@
 """Shared process plumbing: clean shutdown on SIGTERM/Ctrl+C and a Temporal connect with retry."""
 
 import asyncio
+import contextlib
 import signal
 
 import structlog
@@ -45,10 +46,8 @@ async def connect(settings: Settings, stop: asyncio.Event | None = None) -> Clie
                 retry_in_s=delay,
                 error=str(exc),
             )
-            try:
+            with contextlib.suppress(TimeoutError):  # sleep `delay`, but wake early on stop
                 await asyncio.wait_for(stop.wait(), timeout=delay)
-            except TimeoutError:
-                pass
             delay = min(delay * 2, MAX_BACKOFF_SECONDS)
         else:
             log.info("connected to temporal", address=settings.temporal_address)

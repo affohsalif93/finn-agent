@@ -4,6 +4,7 @@ __pycache__/
 .venv/
 .pytest_cache/
 .ruff_cache/
+.mypy_cache/
 
 # Secrets – never commit API keys or mailbox credentials
 .env
