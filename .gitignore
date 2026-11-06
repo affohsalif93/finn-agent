@@ -13,6 +13,7 @@ __pycache__/
 # IDE
 .idea/
 
-# Runtime output
+# Runtime output (runs/ contains mail content)
 out/
+runs/
 *.log
