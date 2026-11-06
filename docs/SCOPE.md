@@ -103,8 +103,30 @@ Dashboard, PDF report, UI, plausibility checks against prior years, contract sea
 ### Product scope (documented, not built)
 Reporting-duty calendar, reminders, drafts + CFO approval, customer UI, multi-tenancy, licensing, Microsoft Graph connector, webhooks, provider failover. See [ROADMAP.md](ROADMAP.md).
 
-## 6. Stack
-Python 3.12 · `uv` · `pdfplumber` · `openpyxl` · OpenAI API (structured outputs) · Temporal (Python SDK) · Langfuse · `imaplib`/`smtplib` · `pytest` · Docker Compose.
+## 6. Stack (D25, D26)
+
+Python 3.12. Versions checked on PyPI on 6 Nov 2026; lower bounds in `pyproject.toml`, exact versions locked in `uv.lock`.
+
+| Purpose | Choice |
+|---|---|
+| Orchestration | `temporalio` 1.35 (incl. pydantic data converter, test environment) |
+| LLM / tracing | `openai` 3.x (structured outputs) · `langfuse` 5.x (optional), API details checked before coding |
+| Excel / PDF | `openpyxl` 3.1 · `pdfplumber` 0.11 |
+| Models / settings | `pydantic` 2.14 · `pydantic-settings` 2.16 |
+| Mail | `imap-tools` 1.16 · stdlib `email` + `smtplib` |
+| Templates / CLI / logs | `jinja2` 3.1 · `typer` 0.28 · `structlog` 26.1 |
+| Dev | `uv` · `ruff` (lint + format) · `mypy` (strict on core modules) · `pytest` + `pytest-asyncio` · GitHub Actions CI |
+
+| Service | Case study |
+|---|---|
+| Temporal | dev server in Docker (SQLite on a volume, UI :8233) |
+| OpenAI | API key from the user's account, model via `OPENAI_MODEL` |
+| Langfuse | Langfuse Cloud, EU region, free tier; off if no keys |
+| Mailbox | new **Gmail** account, IMAP/SMTP with an app password (2-step verification) |
+| Git | private GitHub repo, read access for the reviewers |
+| VM (optional) | e.g. Hetzner CX22 |
+
+Not used on purpose: `tenacity` (Temporal + OpenAI SDK retry), `msoffcrypto-tool` (magic-byte check suffices), formula parsers, `pint`, `babel` (D23).
 
 ## 7. Increments (≈ one commit each, every commit confirmed by the user)
 1. ✅ Project setup, material, scope
@@ -119,7 +141,8 @@ Python 3.12 · `uv` · `pdfplumber` · `openpyxl` · OpenAI API (structured outp
 10. Docker Compose, README (DE), note (DE), time log; end-to-end test from an external address; optional VM deploy
 
 ## 8. Open items
-- Mailbox provider for the new address (any provider with IMAP/SMTP + app password).
-- Langfuse Cloud (proposed for the case) vs. self-hosted: to confirm.
+- ~~Mailbox provider~~ → Gmail with app password (decided). To do: create the account, enable 2-step verification, create the app password; test before the demo that replies don't land in spam.
+- ~~Langfuse~~ → Langfuse Cloud EU (decided). To do: create the account and keys.
 - OpenAI model choice: configurable; pick when implementing (check current models).
+- Check the APIs of `openai` 3.x and `langfuse` 5.x (major versions newer than prior experience) and the Temporal Docker image tag before coding.
 - V4 plan deadline: "within 30 days of drawing up the plan" may already have passed if the 15.10.2026 draft counts. Flag it, don't decide it.

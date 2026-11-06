@@ -35,7 +35,7 @@ PDF ─► page texts (cached, hashed) ─► LLM extraction (full text, fixed s
     ─► second LLM pass: full text + profile → omissions / modifying clauses?
     ─► human review ─► data/contract_profiles/<id>.json (committed)
 ```
-Command: `finn contracts extract` (re-runs only for changed hashes) · `finn contracts check` (validation only).
+Command: `finn contracts extract` (re-runs only for changed hashes) · `finn contracts check` (validation only). A developer command, not a service (§13.2).
 
 ### 2.2 Mail run (every request)
 ```
@@ -627,40 +627,129 @@ Later: Temporal → OpenTelemetry → Langfuse for one end-to-end trace.
 
 ```
 OPENAI_API_KEY, OPENAI_MODEL
-IMAP_HOST, IMAP_PORT, IMAP_USER, IMAP_PASSWORD
-SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD
+IMAP_HOST=imap.gmail.com, IMAP_PORT=993, IMAP_USER, IMAP_PASSWORD   (Gmail app password)
+SMTP_HOST=smtp.gmail.com, SMTP_PORT=465, SMTP_USER, SMTP_PASSWORD
 FINN_ADDRESS, ALLOWED_SENDERS=*, REQUIRE_DMARC_PASS=false
 CONTRACTS_DIR=material, PROFILES_DIR=data/contract_profiles, RUNS_DIR=runs
 TEMPORAL_ADDRESS=temporal:7233, TEMPORAL_TASK_QUEUE=finn
-LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY, LANGFUSE_HOST   (optional)
-POLL_INTERVAL_SECONDS=15, LOOKBACK_DAYS=3, TIGHT_HEADROOM_RATIO=0.10
+LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY, LANGFUSE_HOST=https://cloud.langfuse.com   (optional, EU region)
+POLL_INTERVAL_SECONDS=15, LOOKBACK_DAYS=3, TIGHT_HEADROOM_RATIO=0.10, LOG_FORMAT=console|json
 ```
+`.env.example` holds the same keys with placeholders only.
 
-## 12. Repository layout (planned)
+## 12. Repository layout (D27)
+
+Ordered by layers: **core logic** (pure: files in, models out, no network) → **adapters** (I/O) → **orchestration**. Dependencies only point downwards, so the core is testable without Temporal, mail or an LLM.
 
 ```
 src/finn/
-  config.py            settings from env
-  models.py            shared Pydantic models (PlanValue, CovenantProfile, CovenantResult, …)
-  plan/                reader.py · labels.py · skeleton.py · llm_mapping.py · checks.py
-  errors.py            error codes (FAILURES.md) + German reply templates
-  contracts/           pdf_text.py · extract.py · schema.py · validate.py · completeness.py
-  calc/                recipe.py (schema + whitelist validation) · evaluator.py · rounding.py · format_de.py · sensitivity.py
-  plan/facts.py        plan facts by pattern rules (subordination, cash availability)
-  mail/                connector.py · imap_smtp.py · parse.py · gate.py · render.py · templates/
-  llm/                 client.py (OpenAI + retries + Langfuse) · redact.py (pseudonymise / restore)
-  workflows/           covenant_check.py · activities.py · worker.py · poller.py
-  runs.py              run folder
-  cli.py               finn contracts extract|check · finn process · finn worker · finn poller
-data/contract_profiles/   reviewed profiles (committed)
-material/                 contracts + sample plan (CONTRACTS_DIR)
-tests/                    plan, checks, calc (answer key), mail parsing, workflow (Temporal test env)
-tests/fixtures/           one .xlsx / .eml per failure case (FAILURES.md)
-docker-compose.yml        temporal (dev server, volume) · finn-worker · finn-poller
+├── config.py              settings from .env (pydantic-settings)
+├── log.py                 structlog setup (console for the demo, JSON to files)
+├── errors.py              ErrorCode enum (FAILURES.md), Severity, Finding, German message templates
+├── numbers.py             German number parse/format ("148.200", "34,32 %"), Decimal(str(x))
+│
+├── models/                data contracts (§2.3), no logic
+│   ├── mail.py            InboundMessage, ParsedMessage, Attachment, Request, ReplyDraft, SentRecord
+│   ├── plan.py            CellRef, PlanValue, PlanFact, LoanLine, Plan, WorkbookSkeleton, PlanMapping
+│   ├── contract.py        ContractProfile, Covenant, Recipe, Component, ContractSource
+│   └── result.py          CovenantResult, Used/Excluded, ContractNote, Report, RunRecord
+│
+│ ── core logic ──
+├── plan/                  Excel → building blocks + facts + findings
+│   ├── workbook.py        open, encryption/corruption detection, sheet units, skeleton
+│   ├── labels.py          synonym lists per building block, plan-year header patterns
+│   ├── reader.py          step 1: deterministic mapping, LoanLines, totals
+│   ├── facts.py           plan facts by pattern rules (subordination, cash availability)
+│   ├── checks.py          tie-outs, company/year, units, signs → Findings
+│   └── llm_mapping.py     step 2 (stretch): skeleton → LLM → mapping
+├── calc/                  recipes → results
+│   ├── recipe.py          whitelist validation of recipes
+│   ├── evaluator.py       evaluate(recipe, blocks, facts)
+│   ├── rounding.py        contract rounding, headroom, tight flag
+│   ├── sensitivity.py     rounding-aware break points
+│   └── engine.py          all profiles × plan → Report
+├── contracts/             onboarding + loading
+│   ├── pdf_text.py        page texts with page numbers (cached by hash)
+│   ├── extract.py         LLM extraction → draft profile (structured output)
+│   ├── prompts/           extraction + review prompts (versioned files)
+│   ├── validate.py        quotes exist on the page, schema, whitelist
+│   ├── completeness.py    keyword scan: every hit = covenant or dismissed with reason
+│   └── store.py           load profiles, hash check against material/
+│
+│ ── adapters ──
+├── mail/
+│   ├── connector.py       MailConnector protocol
+│   ├── imap_smtp.py       ImapSmtpConnector (imap-tools + smtplib), was_sent
+│   ├── gate.py            gate.check() + sender rules, tenant/licence stubs
+│   ├── parse.py           .eml → ParsedMessage (attachments, TNEF/zip/link detection)
+│   └── thread.py          thread ID from In-Reply-To / References / subject
+├── llm/
+│   ├── client.py          OpenAI client, structured outputs, timeouts, optional Langfuse
+│   └── redact.py          pseudonymise / restore (D21)
+├── request/
+│   └── intent.py          classify_intent (LLM) + rule fallback + input contracts
+├── reply/
+│   ├── render.py          Report → template → (LLM polish) → ReplyDraft
+│   ├── number_check.py    every number in the text ∈ Report
+│   └── templates/         report.html.j2, report.txt.j2, block.*.j2, ask.*.j2, other.*.j2
+├── runs.py                run folder: incoming.eml, checks.json, results.json, reply.html, …
+│
+│ ── orchestration ──
+├── pipeline.py            every step as a plain function, in order = direct runner (no Temporal)
+├── workflows/
+│   ├── activities.py      thin wrappers: each calls one pipeline step
+│   ├── covenant_check.py  CovenantCheckWorkflow (waiting, signals, retry policies)
+│   └── worker.py          worker startup (pydantic data converter)
+├── poller.py              loop: fetch → gate → save → start / signal workflow
+└── cli.py                 finn contracts extract|check · finn process <eml> · finn worker · finn poller
+
+data/contract_profiles/    V1–V4 .json: LLM-extracted, reviewed, committed (runtime truth)
+material/                  contracts + sample plan (as given, CONTRACTS_DIR)
+tests/
+├── unit/                  numbers, plan, calc (answer key, rounding, units, trap), gate, parse, redact
+├── integration/           pipeline end to end with .eml fixtures (LLM mocked)
+├── workflow/              Temporal test environment (waiting, signals, idempotent send)
+└── fixtures/
+    ├── plans/             generated plan variants (FAILURES.md)
+    ├── mails/             .eml variants
+    └── profiles_gold/     hand-written profiles = ground truth for the extraction eval
+scripts/make_plan_fixtures.py   generates plan variants from the sample plan (reproducible)
+Dockerfile · docker-compose.yml · .env.example · .gitattributes · .github/workflows/ci.yml
+pyproject.toml · uv.lock · README.md (DE) · NOTIZ.md (DE, 1 page)
 ```
+
+- **`pipeline.py` is the key:** the direct runner and the Temporal activities call **the same functions**. Temporal adds durability, not logic.
+- **Gold vs. runtime profiles:** `tests/fixtures/profiles_gold/` is written by hand (regression truth); `data/contract_profiles/` is extracted by the LLM and reviewed. The extraction eval compares them.
+- **Plan variants are generated by a script**, so each variant documents in code what it changes.
 
 ## 13. Deployment
 
-- **Local / demo:** `docker compose up -d` (Temporal dev server with persisted state + UI, worker, poller).
-- **Cloud demo:** one small VM (AWS / Azure / Hetzner): Docker, `git clone`, `.env`, `docker compose up -d`. No inbound ports. Temporal UI via SSH tunnel only. Test the mailbox login from the VM's IP a day before the demo.
+### 13.1 Compose: the whole runtime
+```
+image:     python:3.12-slim + uv (multi-stage, locked deps), non-root user; one image for all roles
+services:
+  temporal      dev server (`temporal server start-dev`), SQLite on volume temporal-data,
+                7233 internal, UI 8233 bound to localhost only, healthcheck
+  finn-worker   `finn worker`   depends_on temporal (healthy), restart: unless-stopped
+  finn-poller   `finn poller`   depends_on temporal (healthy), restart: unless-stopped
+volumes:   ./runs (rw) · ./data/contract_profiles (ro) · ./material (ro) · temporal-data
+env_file:  .env (never baked into the image)
+```
+No database: workflow state lives in Temporal, the audit trail in `runs/`, profiles in the repo. OpenAI and Langfuse are external.
+
+### 13.2 Contract onboarding is a command, not a service
+```
+developer (once per contract version):
+  finn contracts extract   → LLM extraction → data/contract_profiles/V*.json (draft)
+  finn contracts check     → quotes, whitelist, completeness scan, eval vs. gold profiles
+  review the git diff      → commit the approved profiles
+runtime: the worker only reads the profiles (read-only) and checks file hashes
+```
+Also runnable in Docker: `docker compose run --rm finn-worker finn contracts extract`.
+Reasons: contracts don't change during the demo; a human review is required (here: the git diff); no number in the demo depends on the LLM. Product: an onboarding workflow (upload → extract → validate → wait for an approval signal from the review UI → activate); same code, different trigger.
+
+### 13.3 Environments
+- **Local / demo:** `docker compose up -d`.
+- **Cloud demo (optional):** one small VM (e.g. Hetzner CX22 in Germany, ~€4/month): Docker, `git clone`, `.env`, `docker compose up -d`. No inbound ports; Temporal UI via SSH tunnel only. Test the Gmail login from the VM's IP a day before the demo.
+- **CI:** GitHub Actions on every push: `ruff check`, `ruff format --check`, `mypy`, `pytest` (LLM mocked, no secrets needed).
 - **Production:** self-hosted Temporal with Postgres, or Temporal Cloud with client-side payload encryption; EU hosting; secrets in a secret store. See [ROADMAP.md](ROADMAP.md).
