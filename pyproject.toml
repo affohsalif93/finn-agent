@@ -8,6 +8,7 @@ dependencies = [
     "typer>=0.28",
     "pydantic-settings>=2.16",
     "structlog>=26.1",
+    "openpyxl>=3.1",
 ]
 
 [project.scripts]
@@ -26,6 +27,7 @@ dev = [
     "pytest>=9.2",
     "pytest-asyncio>=1.4",
     "ruff>=0.17",
+    "types-openpyxl>=3.1.5.20261017",
 ]
 
 [tool.ruff]
@@ -48,6 +50,8 @@ select = [
     "DTZ",  # naive datetimes (deadlines, covenant dates)
     "PT",   # pytest style
 ]
+# German labels and numbers use typographic characters on purpose (plan titles, unit labels).
+allowed-confusables = ["–", "−"]
 
 [tool.ruff.format]
 quote-style = "double"

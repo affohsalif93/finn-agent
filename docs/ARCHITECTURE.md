@@ -85,15 +85,20 @@ PlanMapping:      items: dict[ItemKey, CellRef], source: dict[ItemKey, "rule"|"l
 CellRef:          sheet, cell                  # "Bilanz", "D22"
 PlanValue:        item: ItemKey, value: Decimal (T€, normalised), ref: CellRef, label,
                   original_unit, derived_from: list[CellRef]   # if recomputed
-PlanFact:         key: FactKey, value: bool, evidence: CellRef + quote, confidence
+PlanFact:         key: FactKey | LoanFactKey, value: bool, evidence: CellRef|None, quote,
+                  ambiguous: bool               # unclear → conservative value (see §4.1)
 Plan:             company, plan_year, reporting_date, status: draft|approved,
                   version_date, file_sha256,
                   values: dict[ItemKey, PlanValue],   # building blocks (§4.1)
                   loans: list[LoanLine], facts: dict[FactKey, PlanFact]
-LoanLine:         name, lender, opening, drawdown, scheduled_repayment,
-                  special_repayment, closing, interest, refs: dict[str, CellRef]
-Finding:          code (FAILURES.md), severity: BLOCK|PARTIAL|WARN|INFO,
-                  message_de, refs: list[CellRef], affects: list[covenant_id]|"all"
+LoanLine:         label, loan_number|None, kind: bank|shareholder|other, opening, drawdown,
+                  scheduled_repayment, special_repayment, closing, interest,
+                  refs: dict[str, CellRef], facts: dict[LoanFactKey, PlanFact]   # bullet / refinanced
+Finding:          code (FAILURES.md), severity: REJECT|IGNORE|ASK|BLOCK|PARTIAL|WARN|INFO,
+                  message_de, refs: list[CellRef],
+                  items: list[str],             # building blocks / facts concerned (set by the reader)
+                  affects: list[covenant_id]|"all"   # set by the calc engine from items (BLOCK/ASK: "all")
+PlanReadResult:   plan: Plan|None, findings: list[Finding], mapping_log
 
 # ── Contracts (onboarding, reviewed JSON) ────────────
 ContractProfile:  §3 (covenants with recipes, sources, …)
@@ -318,6 +323,11 @@ Mapping = finding the cell for each building block, in three steps:
 | per loan: `bullet_in_plan_year`, `refinanced` | code: schedule (closing = 0 with large repayment) + note patterns ("keine Endfälligkeit, keine Refinanzierung") | Finanzierung note 4 → old loans: no bullet, no refinancing |
 
 - Every value is a `PlanValue` with normalised value, cell, label and original unit; every fact a `PlanFact` with evidence.
+- **Unclear facts take the conservative value** (`ambiguous: true`, WARN `PLAN_FACT_AMBIGUOUS`): no proven subordination → the shareholder loan counts as debt; no proven availability → cash is not netted. Patterns handle negation ("keine Verpfändung" = not pledged).
+- **Signs:** in the GuV the majority sign of the expense lines sets the convention; all building blocks become positive magnitudes except net income and equity (their sign is meaningful); lines against the convention → WARN `PLAN_SIGNS`.
+- **Units** are read from sheet titles and header rows only, not from notes (a note may quote "15.000 T€" on a sheet kept in €); no unit on a sheet → the cover sheet's unit; none at all or conflicting → BLOCK `PLAN_UNITS_UNCLEAR`.
+- **Pension unwinding:** explicit "davon" line first (sample: GuV!D14); otherwise GuV interest − loan-schedule interest, only if a plan note states that the difference is the unwinding (sample: Finanzierung note 3); otherwise `PLAN_SUBITEM_NOT_SHOWN`.
+- `finn plan read <file> [--json]` prints every building block with value, cell and label, the loan lines, facts and findings.
 - Sums over loans (`scheduled_repayments_total`, …) keep `derived_from` with every cell used.
 
 ### 4.2 What we check in the workbook, and what we don't (D22)
@@ -328,7 +338,7 @@ Mapping = finding the cell for each building block, in three steps:
 | 2. Figures we use | equity, total assets, loans, repayments | **consistency only**: we read leaf values and the workbook's totals, recompute the totals and compare (tie-outs, §4.4) |
 | 3. Everything else | revenue build-up, staff costs, investment plan | **not checked** (not required by the brief) |
 
-`openpyxl` cannot evaluate formulas, and cached values may be missing or stale; the recomputation in level 2 is also how we get reliable totals.
+`openpyxl` cannot evaluate formulas, and cached values may be missing or stale; the recomputation in level 2 is also how we get reliable totals. Files saved by Excel carry cached results; files written by other tools (and our generated test variants) do not. For those, `plan/formulas.py` evaluates a deliberately small subset (cell and range references, also across sheets, `+ − * /`, brackets, `SUM`/`SUMME`); errors such as `#REF!` propagate; any other function, external link or circular reference → `XLSX_NO_CACHED_VALUES` (PARTIAL for the affected block), never a guess (D22).
 
 ### 4.3 Units (D24)
 
@@ -351,7 +361,8 @@ Summary below; the complete list with error codes, reply wording and fixtures is
 | Check | Severity |
 |---|---|
 | Readable `.xlsx` (not encrypted, not `.xls`/`.csv`) | BLOCK |
-| Required statements found (GuV, Bilanz, Finanzierung) | BLOCK |
+| Required statements found (GuV, Bilanz) | BLOCK |
+| Loan schedule (Finanzierung) found | PARTIAL: only covenants needing loan-schedule blocks (DSCR) are not computable (`PLAN_ITEM_MISSING`) |
 | Company name = borrower in the contract profiles | BLOCK |
 | Plan year found; matches the year in the subject/body (if given); reporting date 31.12.YYYY | BLOCK on mismatch |
 | Units detectable (T€ / € / Mio. €) | BLOCK if unclear |
@@ -751,7 +762,10 @@ src/finn/
 ├── plan/                  Excel → building blocks + facts + findings
 │   ├── workbook.py        open, encryption/corruption detection, sheet units, skeleton
 │   ├── labels.py          synonym lists per building block, plan-year header patterns
-│   ├── reader.py          step 1: deterministic mapping, LoanLines, totals
+│   ├── reader.py          step 1: deterministic mapping, totals; read_plan() entry point
+│   ├── loans.py           loan schedule → LoanLines (loan numbers, kinds), aggregates
+│   ├── formulas.py        small evaluator for formulas without cached values (refs, + − * /, SUM)
+│   ├── render.py          text output for `finn plan read`
 │   ├── facts.py           plan facts by pattern rules (subordination, cash availability)
 │   ├── checks.py          tie-outs, company/year, units, signs → Findings
 │   └── llm_mapping.py     step 2 (stretch): skeleton → LLM → mapping
