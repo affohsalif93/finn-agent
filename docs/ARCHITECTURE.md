@@ -45,6 +45,77 @@ workflow:  parse ─► intent ─► plan read + checks ─► calculation ─�
 The **poller decides who may enter**; the **workflow decides what to do with it** (see §6.1, §7).
 At runtime the LLM only classifies the request and writes the text. **No number depends on the LLM** (D1, D16).
 
+### 2.3 Data contracts
+
+Every arrow is one Temporal activity, every box one Pydantic model (`src/finn/models.py` is the source of truth; this is the overview). Money is `Decimal`, serialised as a string.
+
+```
+InboundMessage ─parse_message─► ParsedMessage ─classify_intent─► Request
+                                                                    │
+           ┌──────────────────────── load_and_validate_plan ────────┘
+           ▼
+   WorkbookSkeleton ─map─► PlanMapping ─read─► Plan + list[Finding]
+                                                  │
+   ContractProfile[] ─────────── calculate ───────┤
+                                                  ▼
+                                         list[CovenantResult]
+                                                  │ render_reply
+                                                  ▼
+                                    ReplyDraft ─send_reply─► SentRecord
+```
+
+```python
+# ── Mail ─────────────────────────────────────────────
+InboundMessage:  message_id, in_reply_to, references[], from_addr, to_addrs[],
+                 subject, date, auth_results, auto_submitted, mailbox,
+                 raw_eml_path, attachment_paths[]            # from the poller
+ParsedMessage:   inbound, body_text (pseudonymised), thread: list[ThreadMessage],
+                 attachments: list[Attachment]
+Attachment:      path, filename, content_type, size, sha256,
+                 kind: xlsx|xlsm|xls|pdf|zip|tnef|other
+Request:         intent: covenant_check|follow_up_input|question_about_result|other,
+                 plan_year: int|None, contract_filter: list[str]|None,
+                 confidence, assumptions: list[str], unsupported: list[str]
+
+# ── Plan ─────────────────────────────────────────────
+WorkbookSkeleton: sheets: list[SheetSkeleton]  # labels, headers, coordinates, no values
+SheetSkeleton:    name, hidden, unit_label, header_cells, row_labels, text_notes
+PlanMapping:      items: dict[ItemKey, CellRef], source: dict[ItemKey, "rule"|"llm"],
+                  reasons: dict[ItemKey, str]
+CellRef:          sheet, cell                  # "Bilanz", "D22"
+PlanValue:        item: ItemKey, value: Decimal (T€, normalised), ref: CellRef, label,
+                  original_unit, derived_from: list[CellRef]   # if recomputed
+PlanFact:         key: FactKey, value: bool, evidence: CellRef + quote, confidence
+Plan:             company, plan_year, reporting_date, status: draft|approved,
+                  version_date, file_sha256,
+                  values: dict[ItemKey, PlanValue],   # building blocks (§4.1)
+                  loans: list[LoanLine], facts: dict[FactKey, PlanFact]
+LoanLine:         name, lender, opening, drawdown, scheduled_repayment,
+                  special_repayment, closing, interest, refs: dict[str, CellRef]
+Finding:          code (FAILURES.md), severity: BLOCK|PARTIAL|WARN|INFO,
+                  message_de, refs: list[CellRef], affects: list[covenant_id]|"all"
+
+# ── Contracts (onboarding, reviewed JSON) ────────────
+ContractProfile:  §3 (covenants with recipes, sources, …)
+
+# ── Calculation ──────────────────────────────────────
+CovenantResult:   covenant_id, contract_id, name_de,
+                  status: met|breached|not_computable|manual_review,
+                  value_raw, value_rounded, threshold, operator, unit,
+                  headroom, headroom_unit: pp|ratio|T€, tight, sensitivity,
+                  components: list[Used|Excluded],   # each with PlanValue / evidence + contract source
+                  formula_de: str,                   # generated from the recipe, e.g. "(96.100 + 0,5 × 22.800) / 313.200"
+                  sources: list[ContractSource], reason: str|None
+
+# ── Reply ────────────────────────────────────────────
+ReplyDraft:       to, subject, in_reply_to, references[], message_id (deterministic),
+                  html, text, placeholders: dict[str, str], used_template: bool
+SentRecord:       message_id, sent_at, skipped_already_sent: bool
+RunRecord:        run_id = workflow ID; all of the above → runs/<id>/
+```
+- `Finding` is the **one** error type for everything; reply header, run folder and tests read the same list.
+- `CovenantResult.components` carries the cells and contract sources → "source of every number" in the mail.
+
 ## 3. Contract profile schema
 
 ```jsonc
@@ -59,12 +130,20 @@ At runtime the LLM only classifies the request and writes the text. **No number 
   ],
   "covenants": [{
     "covenant_id": "V4-DVG",
-    "metric_type": "net_debt_to_ebitda",          // equity_ratio | net_debt_to_ebitda | dscr
+    "metric_type": "net_debt_to_ebitda",          // label + type-specific extras: equity_ratio | net_debt_to_ebitda | dscr
     "name_in_contract": "Dynamischer Verschuldungsgrad",
-    "operator": "<=", "threshold": "3.50", "unit": "ratio",   // ratio | percent
+    "operator": "<=", "threshold": "3.50", "unit": "ratio",   // ratio | percent | amount (T€)
     "test_date": "annual, 31.12.",
     "rounding": {"decimals": 2, "method": "half_up"},
-    "parameters": { /* see 3.1 */ },
+    "recipe": {                                   // see 3.1
+      "numerator": [
+        {"item": "bank_debt", "weight": "1", "source": "§ 1, p. 2"},
+        {"item": "shareholder_loan", "weight": "1", "exclude_if": "qualified_subordination", "source": "§ 1, p. 2"},
+        {"item": "cash", "weight": "-1", "only_if": "cash_freely_available", "source": "§ 1, p. 3"}
+      ],
+      "denominator": [ {"item": "ebitda", "weight": "1", "source": "§ 1, p. 2"} ],
+      "if_subitem_not_shown": "partial"           // partial | assume_zero_warn
+    },
     "sources": [ {"role": "covenant|definition|rounding|plan_basis", "page": 7, "section": "§ 14 Abs. 1 lit. b", "quote": "…"} ],
     "related_clauses": [ {"type": "plan_basis_not_default|cure|no_cure|pricing_only", "page": 7, "section": "§ 14 Abs. 3", "quote": "…"} ],
     "unmapped_components": [],                     // non-empty → not calculated, manual review
@@ -74,24 +153,44 @@ At runtime the LLM only classifies the request and writes the text. **No number 
 ```
 Thresholds and amounts are **strings** holding exact decimals (also for Temporal serialisation).
 
-### 3.1 Parameters per metric type (D5)
+### 3.1 Recipes (D5)
 
-| Type | Formula | Parameters | V2 | V3 | V4 |
-|---|---|---|---|---|---|
-| `equity_ratio` | (equity + s × Sonderposten [+ shareholder loan]) / total assets | `sonderposten_share` | 0.5 | – | 0.0 |
-| | | `include_shareholder_loan` | false | – | false |
-| `net_debt_to_ebitda` | (bank debt [+ shareholder loan] − cash) / EBITDA | `shareholder_loans` | – | – | `exclude_if_qualified_subordination` |
-| | | `cash` | – | – | `freely_available_only` |
-| `dscr` | (EBITDA − income taxes) / (interest + scheduled repayments) | `include_shareholder_loan` | – | true | – |
-| | | `exclude_provision_unwinding` | – | true | – |
-| | | `exclude_special_repayments` | – | true | – |
-| EBITDA (shared) | JÜ + income taxes + interest expense − interest income + depreciation ± extraordinary (§ 285 Nr. 31 HGB) | `add_back`, `deduct`, `extraordinary_items` | – | std | std |
+The **shape** of a covenant is standard (a ratio, or an amount, compared with a threshold). **What goes into it** is defined by the contract wording. A recipe states which building blocks (§4.1) enter the numerator / denominator, with which weight and under which condition.
 
-Conditional parameters (e.g. "exclude if qualified subordination") are resolved by code against plan facts (balance-sheet note 2), and the evidence is recorded.
+| Covenant | Numerator | Denominator | Result (answer key) |
+|---|---|---|---|
+| V2 economic equity ratio (%) | `equity` + **0.5 ×** `sonderposten` (shareholder loans never) | `total_assets` | 34.32 % |
+| V3 DSCR | `ebitda` − `income_taxes` | `interest_expense` − `pension_unwinding` + `scheduled_repayments_total` (all loans **incl.** shareholder loan; special repayments are a separate block and not used) | 1.56 |
+| V4 equity ratio (%) | `equity` | `total_assets` | 30.7 % |
+| V4 dynamic leverage | `bank_debt` + `shareholder_loan` **excluded if** `qualified_subordination` − `cash` **only if** `cash_freely_available` | `ebitda` | 3.37 |
+| `ebitda` (sub-recipe, V3 Anlage 3 / V4 § 1) | `net_income` + `income_taxes` + `interest_expense` − `interest_income` + `depreciation` (± `extraordinary_items` if shown) | – | 40,200 |
+
+**Whitelist** (the only things a recipe may use; validated at onboarding, D23):
+- items: the building blocks of §4.1 and named sub-recipes (`ebitda`);
+- weights: decimal strings (`"1"`, `"-1"`, `"0.5"`);
+- conditions: `exclude_if` / `only_if` with a plan fact (§4.1);
+- one division, contract rounding, one comparison.
+
+Anything the whitelist cannot express goes to `unmapped_components` → `manual_review`, no number (D5).
+
+**Where plan and contract don't match one-to-one:**
+
+| Mismatch | Example | Handling |
+|---|---|---|
+| one contract term = several plan lines | "Finanzverbindlichkeiten" = bank loans + shareholder loan (+ leasing) | several components |
+| partial weight | 50 % of Sonderposten | weight |
+| conditional inclusion | shareholder loan out if subordinated | condition, decided by code from a plan fact, evidence recorded |
+| exclusion of a sub-item | interest without pension unwinding; repayments without special repayments | negative component / separate block, if the plan shows the sub-item |
+| sub-item not shown in the plan | no "davon Aufzinsung" line | per recipe: `partial` (not computable) or `assume_zero_warn` (`PLAN_SUBITEM_NOT_SHOWN`) |
+| contract term with no plan counterpart | leasing, guarantees, cash pool | marked in the profile; absent in the plan → WARN "nicht ausgewiesen, mit 0 angesetzt" (`PLAN_ITEM_NOT_IN_PLAN`); never silently dropped |
+| definition outside the whitelist | "EBITDA bereinigt um Einmaleffekte nach Ermessen der Bank" | `unmapped_components` → manual review |
+| rules around the formula | rounding, ≥ / ≤, test date, plan basis | profile fields |
 
 ## 4. Plan reader (D6)
 
-The calculation needs ~20 **canonical items**. Mapping = finding the cell for each item, in three steps:
+The reader is **contract-neutral**: it delivers **building blocks** (§4.1) at the finest level any contract needs, plus **plan facts**. It does not know about covenants; the recipes (§3.1) combine the blocks. The required blocks are the union over all recipes, so a missing block affects only the covenants that use it (PARTIAL).
+
+Mapping = finding the cell for each building block, in three steps:
 
 ```
 1. Deterministic reader   every sheet, any row/column: row label matches a synonym
@@ -112,19 +211,48 @@ The calculation needs ~20 **canonical items**. Mapping = finding the cell for ea
 - Step 2 is a stretch goal in the case study (after the end-to-end flow works). Product: the confirmed mapping is stored per customer as a **plan profile** and reused every year.
 - Test fixtures: renamed labels, moved rows, everything on one sheet, missing loan schedule.
 
-Canonical items, by statement:
+### 4.1 Building blocks and plan facts
 
-| Statement | Items |
+| Statement | Building blocks (`ItemKey`) | Sample plan |
+|---|---|---|
+| GuV | `net_income` · `income_taxes` · `interest_expense` · `pension_unwinding` · `interest_income` · `depreciation` · `extraordinary_items` (optional) | GuV D-column |
+| Bilanz | `total_assets` · `total_equity_liabilities` (balance check) · `equity` · `sonderposten` · `bank_debt` · `shareholder_loan` · `cash` | Bilanz D12–D29 |
+| Finanzierung | per loan a `LoanLine` (opening, drawdown, scheduled / special repayment, closing, interest) → `scheduled_repayments_total`, `special_repayments_total`, `total_bank_debt` | rows 5–9, 13 |
+| Cover | company, plan year, reporting date, status, version date | Deckblatt |
+
+| Plan fact (`FactKey`) | Decided by | Sample plan |
+|---|---|---|
+| `qualified_subordination` (shareholder loan) | **code**: pattern rules on note text ("Rangrücktritt" + "§ 39 Abs. 2 InsO" / "qualifiziert"); ambiguous → WARN `PLAN_FACT_AMBIGUOUS` + stated assumption | Bilanz note 2 → true |
+| `cash_freely_available` | code: pattern rules ("frei verfügbar", no "verpfändet/gesperrt") | Bilanz note 3 → true |
+
+- Every value is a `PlanValue` with normalised value, cell, label and original unit; every fact a `PlanFact` with evidence.
+- Sums over loans (`scheduled_repayments_total`, …) keep `derived_from` with every cell used.
+
+### 4.2 What we check in the workbook, and what we don't (D22)
+
+| Level | Example | Our job |
+|---|---|---|
+| 1. Covenant ratios | DSCR, equity ratios, leverage | **computed by us** (not in the workbook); EBITDA is built from GuV lines per contract |
+| 2. Figures we use | equity, total assets, loans, repayments | **consistency only**: we read leaf values and the workbook's totals, recompute the totals and compare (tie-outs, §4.4) |
+| 3. Everything else | revenue build-up, staff costs, investment plan | **not checked** (not required by the brief) |
+
+`openpyxl` cannot evaluate formulas, and cached values may be missing or stale; the recomputation in level 2 is also how we get reliable totals.
+
+### 4.3 Units (D24)
+
+| Pitfall | Handling |
 |---|---|
-| GuV | net income, income taxes, interest expense, of which pension unwinding, interest income, depreciation, (extraordinary items) |
-| Bilanz | equity, Sonderposten, total assets, bank liabilities, shareholder loan, cash, sub-totals for checks |
-| Finanzierung | per loan: opening balance, drawdowns, scheduled repayment, special repayment, closing balance, interest; loan identifier |
-| Cover / notes | company name, plan year, units, status (draft/approved), subordination note, cash availability note |
+| different units per sheet (Bilanz T€, Finanzierung €) | unit detected **per sheet** ("in T€", "TEUR", "Tsd. €", "in €", "Mio. €"); **normalised to T€ when reading**; the engine sees one unit only (`PLAN_UNITS_CONVERTED`, INFO) |
+| unit missing / unclear | BLOCK `PLAN_UNITS_UNCLEAR` |
+| implausible scale | total assets vs. contract loan amounts differ by ~×1000 → WARN `PLAN_SCALE_IMPLAUSIBLE` |
+| percent vs. ratio | profile `unit: percent \| ratio`; percent thresholds stored as `"27.5"`; engine multiplies the ratio by 100 |
+| headroom unit | derived from the covenant unit: **pp** (Prozentpunkte) for percent, plain for ratios, T€ for amounts |
+| absolute-amount covenants ("EK mindestens 80 Mio. €") | threshold `unit: amount`, converted to T€ before comparing (not in our contracts; supported by the schema) |
+| German number format | parse: `.` thousands, `,` decimal; output: `148.200 T€`, `34,32 %`, `3,37`; one tested formatter |
+| signs | normalised by section (`PLAN_SIGNS`) |
+| floats from Excel | `Decimal(str(x))`, never `Decimal(x)` |
 
-- Every value is returned as `PlanValue(value: Decimal, sheet, cell, label)`.
-- **Formulas:** `openpyxl` cannot evaluate formulas, and cached values may be missing or stale. We recompute every sub-total from input cells and compare with the cached value when it exists.
-
-### 4.1 Input checks (D7)
+### 4.4 Input checks (D7)
 
 Summary below; the complete list with error codes, reply wording and fixtures is in [FAILURES.md](FAILURES.md).
 
@@ -147,15 +275,73 @@ Summary below; the complete list with error codes, reply wording and fixtures is
 
 Every reply begins with a header of **what was checked**: file name, company, plan year, version date, file hash, check results.
 
-## 5. Calculation engine
+## 5. Calculation engine (D1, D5, D23)
 
-- Pure functions: `compute(covenant_profile, plan) -> CovenantResult`. No I/O, no LLM.
-- `Decimal` throughout; rounding as specified by the contract (`ROUND_HALF_UP`); where the contract specifies none, 2 decimals, flagged.
+**Deterministic = same profile + same plan → same result, with no LLM at calculation time.** The recipe is data; the evaluator that applies it is fixed code. The LLM's interpretation happens once at onboarding, is reviewed and frozen (D2).
+
+```
+ONBOARDING (once, LLM)   contract PDF ─► draft recipe ─► validation + review ─► profile JSON (committed, hashed)
+RUNTIME (no LLM)         profile JSON + building blocks + plan facts ─► evaluator ─► CovenantResult
+```
+
+### 5.1 Evaluator
+```python
+def evaluate(recipe, blocks, facts) -> Evaluation:
+    def side(components):
+        total, used = Decimal(0), []
+        for c in components:
+            if c.exclude_if and facts[c.exclude_if].value:
+                used.append(Excluded(c, evidence=facts[c.exclude_if].evidence)); continue
+            if c.only_if and not facts[c.only_if].value:
+                used.append(Excluded(c, evidence=facts[c.only_if].evidence)); continue
+            v = blocks[c.item]                      # PlanValue (or evaluated sub-recipe, e.g. ebitda)
+            total += Decimal(c.weight) * v.value
+            used.append(Used(c, v))
+        return total, used
+
+    num, num_used = side(recipe.numerator)
+    den, den_used = side(recipe.denominator)
+    if den <= 0: return NotComputable("Nenner ≤ 0", num_used + den_used)
+    raw = num / den * (100 if recipe.unit == "percent" else 1)
+    rounded = raw.quantize(Decimal(10) ** -recipe.rounding.decimals, ROUND_HALF_UP)
+    met = compare(rounded, recipe.operator, Decimal(recipe.threshold))
+    return Evaluation(raw, rounded, met, headroom(rounded, recipe), num_used, den_used)
+```
+- Pure functions, no I/O, no LLM. `Decimal` throughout; contract rounding (`ROUND_HALF_UP`); none specified → 2 decimals, flagged (`CALC_NO_ROUNDING_RULE`).
 - Comparison uses the **rounded** value, as the contracts specify.
-- `CovenantResult`: value, threshold, operator, headroom (unit: pp / ratio), met, tight flag, inputs (each with cell and label), formula string, sources.
+- The `used` list is the calculation path in the mail; `formula_de` is generated from the same list, so what is shown is exactly what was computed.
 - **Tight** = headroom < 10 % of the threshold (configurable). Answer key: V4 equity ratio and V4 leverage are tight.
-- **Sensitivity:** for EBITDA-based covenants, the EBITDA drop at which the covenant would break; for equity ratios, the equity drop. Rounding-aware, computed in code.
-- Regression test: the answer key in [SCOPE.md](SCOPE.md) §3.
+- **Sensitivity:** for EBITDA-based covenants the EBITDA drop at which the covenant breaks; for equity ratios the equity drop. Rounding-aware, computed in code.
+- Type-specific rule: EBITDA ≤ 0 → leverage "nicht sinnvoll definiert" (`PLAN_IMPLAUSIBLE`).
+
+### 5.2 Worked example: V4 dynamic leverage
+
+| Step | From | Value (T€) |
+|---|---|---|
+| `bank_debt` × 1 | Bilanz!D28 | 148,200 |
+| `shareholder_loan` excluded | fact `qualified_subordination` = true (Bilanz note 2, "Rangrücktritt § 39 Abs. 2 InsO") | – |
+| `cash` × −1 | Bilanz!D12 (fact `cash_freely_available`, note 3) | −12,600 |
+| numerator | | 135,600 |
+| `ebitda` (sub-recipe, 5 GuV cells) | GuV!D… | 40,200 |
+| raw → rounded (2 dp, half-up) | | 3.3731 → **3.37** |
+| ≤ 3.50 (§ 14 Abs. 1 lit. b) | profile | **met, headroom 0.13** |
+
+### 5.3 Where determinism could break
+
+| Risk | Safeguard |
+|---|---|
+| LLM extracts a wrong recipe (e.g. shareholder loan in V4) | one-time reviewed extraction; quote check per component; answer key as regression test |
+| plan facts read inconsistently | decided by code (pattern rules), ambiguous → WARN + stated assumption |
+| floating-point errors | `Decimal` everywhere, decimals as strings in JSON |
+| rounding interpretation | rounding rule per profile, one function, unit-tested |
+| recipe uses something unsupported | whitelist validation → `manual_review`, never a guess |
+| profile changed unnoticed | profile hash recorded in every run and in the reply header |
+
+### 5.4 Tests (two separate questions)
+1. **Is the evaluator correct?** Hand-written profiles + sample plan must reproduce the answer key exactly (34.32 / 1.56 / 30.7 / 3.37). Plus: rounding edges (30.65 → 30.7, 30.649 → 30.6, exactly at threshold), units (plan in €, mixed sheets, missing unit), the trap (V4 with shareholder loan must **not** give 3.57), denominator ≤ 0. Increment 5, no LLM.
+2. **Is the extraction correct?** LLM-extracted profiles compared with the hand-written ones (eval). Increment 6.
+
+An interpretation error and a calculation error are never mixed up.
 
 ## 6. Mail handling
 
@@ -388,7 +574,8 @@ src/finn/
   plan/                reader.py · labels.py · skeleton.py · llm_mapping.py · checks.py
   errors.py            error codes (FAILURES.md) + German reply templates
   contracts/           pdf_text.py · extract.py · schema.py · validate.py · completeness.py
-  calc/                metrics.py · ebitda.py · rounding.py · engine.py
+  calc/                recipe.py (schema + whitelist validation) · evaluator.py · rounding.py · format_de.py · sensitivity.py
+  plan/facts.py        plan facts by pattern rules (subordination, cash availability)
   mail/                connector.py · imap_smtp.py · parse.py · gate.py · render.py · templates/
   llm/                 client.py (OpenAI + retries + Langfuse) · redact.py (pseudonymise / restore)
   workflows/           covenant_check.py · activities.py · worker.py · poller.py

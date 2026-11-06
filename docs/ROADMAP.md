@@ -84,7 +84,7 @@ Contracts differ but are composed of a small set of item types:
 |---|---|
 | Basic loan data | lender, amount, term, loan number |
 | Defined terms | Eigenkapital, Finanzverbindlichkeiten, EBITDA |
-| Financial covenants | metric, definition parameters, threshold, test date, rounding |
+| Financial covenants | metric, recipe (building blocks, weights, conditions), threshold, test date, rounding |
 | Reporting duties | document, deadline rule, recipient, signatories, template |
 | Event notices | change of control, litigation, regulatory decisions |
 | Repayment schedule | dates, amounts, tranches |

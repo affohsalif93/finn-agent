@@ -93,9 +93,13 @@ Code checks these after the intent classification; anything missing → `ASK`.
 | `PLAN_NO_PLAN_COLUMN` | only actuals, no plan column | header search | BLOCK | "Keine Planspalte gefunden (nur Ist-Werte)." | ✅ | `plan_actuals_only.xlsx` |
 | `PLAN_COMPANY_MISMATCH` | company ≠ borrower in the contracts | cover sheet vs. profiles | BLOCK | "Der Plan gehört zu … , die Verträge zu Stadtwerke Musterstadt GmbH." | ✅ | `plan_other_company.xlsx` |
 | `PLAN_UNITS_UNCLEAR` | T€ / € / Mio. € not detectable | unit labels | BLOCK | "Einheit nicht erkennbar. Bitte angeben (T€ / €)." | ✅ | `plan_no_units.xlsx` |
-| `PLAN_UNITS_CONVERTED` | declared € instead of T€ | unit label | convert; INFO | "Werte in € angegeben, in T€ umgerechnet." | ✅ | `plan_in_eur.xlsx` |
+| `PLAN_UNITS_CONVERTED` | declared € / Mio. € instead of T€, also per sheet (e.g. Finanzierung in €) | unit label per sheet | normalise to T€; INFO | "Finanzierung in € angegeben, in T€ umgerechnet." | ✅ | `plan_in_eur.xlsx`, `plan_mixed_units.xlsx` |
+| `PLAN_SCALE_IMPLAUSIBLE` | values ~×1000 off vs. contract loan amounts | total assets / bank debt vs. profile amounts | WARN | "Größenordnung auffällig: Bankverbindlichkeiten 148 vs. Darlehen 64 Mio. €. Einheit prüfen." | ✅ | `plan_wrong_unit_label.xlsx` |
 | `PLAN_MAPPING_LLM` | items found only via step 2 (LLM mapping) | mapping source | INFO | "Zuordnung durch KI vorgeschlagen, durch Abstimmungsprüfungen bestätigt: …" | ✅ stretch | `plan_renamed_labels.xlsx`, `plan_one_sheet.xlsx` |
 | `PLAN_ITEM_MISSING` | needed item not found after steps 1+2 | mapping result | PARTIAL | "V3 nicht berechenbar: Darlehensspiegel (Tilgungen) fehlt." | ✅ | `plan_no_financing.xlsx` |
+| `PLAN_SUBITEM_NOT_SHOWN` | recipe excludes a sub-item the plan doesn't show separately (no "davon Aufzinsung") | building block missing, parent present | per recipe: PARTIAL or WARN with 0 | "Aufzinsung Pensionsrückstellungen nicht separat ausgewiesen; mit 0 angesetzt." | ✅ | `plan_no_unwinding.xlsx` |
+| `PLAN_ITEM_NOT_IN_PLAN` | contract term with no plan counterpart (leasing, guarantees) | profile marks the term; no block found | WARN, 0 | "Leasingverbindlichkeiten im Plan nicht ausgewiesen, mit 0 angesetzt." | ✅ | test profile |
+| `PLAN_FACT_AMBIGUOUS` | plan fact unclear (subordination note missing or vague) | pattern rules on note text | WARN, stated assumption; the result with the alternative assumption is shown too | "Rangrücktritt nicht eindeutig; Ergebnis ohne / mit Gesellschafterdarlehen: 3,37 / 3,57." | ✅ | `plan_no_subordination_note.xlsx` |
 | `PLAN_LABEL_AMBIGUOUS` | same label twice (`Zinsaufwand`) | duplicate matches | choose by section; still ambiguous → step 2 / ASK | "Zinsaufwand kommt zweimal vor (GuV!D9, GuV!D20). Welcher Wert gilt?" | ✅ | `plan_duplicate_label.xlsx` |
 | `PLAN_UNBALANCED` | assets ≠ liabilities | recomputed totals | BLOCK | "Bilanz nicht ausgeglichen: Aktiva 313.200, Passiva 312.900 T€." | ✅ | `plan_unbalanced.xlsx` |
 | `PLAN_LOANS_MISMATCH` | loan schedule ≠ bank liabilities | Finanzierung total vs. Bilanz | BLOCK | "Darlehensspiegel 148.200 ≠ Bilanz 150.000 T€." | ✅ | `plan_loans_mismatch.xlsx` |
@@ -114,6 +118,7 @@ Code checks these after the intent classification; anything missing → `ASK`.
 |---|---|---|---|---|---|---|
 | `CONTRACT_CHANGED` | contract file hash ≠ profile hash | hash at start | compute with the old profile; WARN | "Vertrag 4 wurde geändert; Profil nicht neu geprüft." | ✅ | test only |
 | `PROFILE_MISSING` | no / invalid profile | load + schema validation | that contract "nicht geprüft"; others continue | "Vertrag X konnte nicht geprüft werden." | ✅ | test only |
+| `PROFILE_INVALID_RECIPE` | recipe uses an item / condition / operation outside the whitelist | validation at onboarding and at load | that covenant `manual_review` | "Covenant … kann nicht automatisch berechnet werden." | ✅ | test profile |
 | `PROFILE_UNMAPPED` | `unmapped_components` non-empty | profile | that covenant "manuelle Prüfung" | "Covenant … enthält Bestandteile, die ich nicht automatisch abbilde: …" | ✅ | test profile |
 | `CONTRACT_NEW_FILE` | contract in the folder without a profile | folder scan | WARN; product: start onboarding | "Neuer Vertrag ohne geprüftes Profil: …" | ✅ detect | test only |
 

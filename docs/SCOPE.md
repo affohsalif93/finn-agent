@@ -111,8 +111,8 @@ Python 3.12 · `uv` · `pdfplumber` · `openpyxl` · OpenAI API (structured outp
 2. Docs: scope update, decisions, architecture, roadmap
 3. Project skeleton: dependencies, package layout, config + `.env.example`
 4. Plan reader (label-based, cell references) + input checks + tests
-5. Calculation engine with hand-written profiles + answer-key tests (no LLM yet)
-6. Contract text extraction (page cache) → LLM extraction → quote validation + completeness check → reviewed profiles
+5. Calculation engine (recipe evaluator) with hand-written profiles + answer-key, rounding, unit and trap tests (no LLM yet)
+6. Contract text extraction (page cache) → LLM extraction → quote validation + completeness check → reviewed profiles; eval against the hand-written profiles
 7. Mail parsing, intent, reply rendering (LLM + template fallback), number check, direct runner `finn process mail.eml`
 8. Temporal workflow + activities, IMAP poller, idempotent SMTP send, thread handling
 9. Langfuse tracing, run folder, structured logs
