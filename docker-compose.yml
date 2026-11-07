@@ -1,7 +1,8 @@
 # Finn runtime: Temporal dev server + worker + poller (ARCHITECTURE.md §13).
-#   docker compose up -d                       start everything
-#   docker compose run --rm finn-worker ping   end-to-end check (prints "pong")
-#   Temporal UI: http://localhost:8233 (bound to localhost only)
+#   docker compose up -d                                core stack
+#   docker compose --profile observability up -d        + self-hosted Langfuse (tracing)
+#   docker compose run --rm finn-worker ping            end-to-end check (prints "pong")
+#   Temporal UI: http://localhost:8233 · Langfuse UI: http://localhost:3000 (localhost only)
 
 name: finn
 
@@ -13,6 +14,7 @@ x-finn: &finn
       required: false     # the stack also starts without one
   environment:
     TEMPORAL_ADDRESS: temporal:7233
+    LANGFUSE_HOST: http://langfuse-web:3000   # unreachable without the profile → tracing off
   depends_on:
     temporal:
       condition: service_healthy
@@ -56,5 +58,147 @@ services:
     volumes:
       - ./runs:/app/runs
 
+  # ── Self-hosted Langfuse (optional): `--profile observability` ─────────────────────
+  # Trimmed from langfuse/langfuse docker-compose.yml (v4, no AI gateway). All ports on
+  # localhost; secrets from .env (LF_*), project API keys created headless on first start.
+  langfuse-web:
+    profiles: [observability]
+    image: docker.langfuse.com/langfuse/langfuse:${LANGFUSE_IMAGE_TAG:-4}
+    restart: unless-stopped
+    depends_on: &langfuse-deps
+      postgres: {condition: service_healthy}
+      clickhouse: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      minio: {condition: service_healthy}
+    ports:
+      - "127.0.0.1:3000:3000"
+    healthcheck:   # gates the worker (web runs the DB migrations); Next.js binds to the container IP, not localhost
+      test: ["CMD", "node", "-e", "fetch('http://'+require('os').hostname()+':3000/api/public/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+    environment: &langfuse-env
+      NEXTAUTH_URL: http://localhost:3000
+      NEXTAUTH_SECRET: ${LF_NEXTAUTH_SECRET:-changeme}
+      DATABASE_URL: postgresql://postgres:${LF_POSTGRES_PASSWORD:-postgres}@postgres:5432/postgres
+      SALT: ${LF_SALT:-changeme}
+      ENCRYPTION_KEY: ${LF_ENCRYPTION_KEY:-0000000000000000000000000000000000000000000000000000000000000000}
+      TELEMETRY_ENABLED: "false"
+      CLICKHOUSE_MIGRATION_URL: clickhouse://clickhouse:9000
+      CLICKHOUSE_URL: http://clickhouse:8123
+      CLICKHOUSE_USER: clickhouse
+      CLICKHOUSE_PASSWORD: ${LF_CLICKHOUSE_PASSWORD:-clickhouse}
+      CLICKHOUSE_CLUSTER_ENABLED: "false"
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_AUTH: ${LF_REDIS_PASSWORD:-redis}
+      LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse
+      LANGFUSE_S3_EVENT_UPLOAD_REGION: auto
+      LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: minio
+      LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: ${LF_MINIO_PASSWORD:-miniosecret}
+      LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://minio:9000
+      LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
+      LANGFUSE_S3_EVENT_UPLOAD_PREFIX: events/
+      LANGFUSE_S3_MEDIA_UPLOAD_BUCKET: langfuse
+      LANGFUSE_S3_MEDIA_UPLOAD_REGION: auto
+      LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID: minio
+      LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY: ${LF_MINIO_PASSWORD:-miniosecret}
+      LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://minio:9000
+      LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: "true"
+      LANGFUSE_S3_MEDIA_UPLOAD_PREFIX: media/
+      # Headless init: org, project, API keys (= Finn's LANGFUSE_* keys) and the admin login
+      LANGFUSE_INIT_ORG_ID: finn
+      LANGFUSE_INIT_ORG_NAME: Finn
+      LANGFUSE_INIT_PROJECT_ID: finn-covenants
+      LANGFUSE_INIT_PROJECT_NAME: Finn Covenant-Prüfung
+      LANGFUSE_INIT_PROJECT_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
+      LANGFUSE_INIT_PROJECT_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
+      LANGFUSE_INIT_USER_EMAIL: ${LF_ADMIN_EMAIL:-}
+      LANGFUSE_INIT_USER_NAME: Admin
+      LANGFUSE_INIT_USER_PASSWORD: ${LF_ADMIN_PASSWORD:-}
+
+  langfuse-worker:
+    profiles: [observability]
+    image: docker.langfuse.com/langfuse/langfuse-worker:${LANGFUSE_IMAGE_TAG:-4}
+    restart: unless-stopped
+    depends_on:
+      <<: *langfuse-deps
+      langfuse-web: {condition: service_healthy}
+    environment: *langfuse-env
+
+  postgres:
+    profiles: [observability]
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${LF_POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: postgres
+      TZ: UTC
+      PGTZ: UTC
+    volumes:
+      - langfuse-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  clickhouse:
+    profiles: [observability]
+    image: clickhouse/clickhouse-server:26.3.62.3
+    restart: unless-stopped
+    user: "101:101"
+    environment:
+      CLICKHOUSE_DB: default
+      CLICKHOUSE_USER: clickhouse
+      CLICKHOUSE_PASSWORD: ${LF_CLICKHOUSE_PASSWORD:-clickhouse}
+    volumes:
+      - langfuse-clickhouse:/var/lib/clickhouse
+      - langfuse-clickhouse-logs:/var/log/clickhouse-server
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:8123/ping || exit 1
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 1s
+
+  redis:
+    profiles: [observability]
+    image: redis:7
+    restart: unless-stopped
+    command: ["--requirepass", "${LF_REDIS_PASSWORD:-redis}", "--maxmemory-policy", "noeviction"]
+    volumes:
+      - langfuse-redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${LF_REDIS_PASSWORD:-redis}", "ping"]
+      interval: 3s
+      timeout: 10s
+      retries: 10
+
+  minio:
+    profiles: [observability]
+    image: cgr.dev/chainguard/minio
+    restart: unless-stopped
+    entrypoint: sh
+    command: -c 'mkdir -p /data/langfuse && minio server --address ":9000" --console-address ":9001" /data'
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: ${LF_MINIO_PASSWORD:-miniosecret}
+    volumes:
+      - langfuse-minio:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 1s
+      timeout: 5s
+      retries: 5
+      start_period: 1s
+
 volumes:
   temporal-data:
+  langfuse-postgres:
+  langfuse-clickhouse:
+  langfuse-clickhouse-logs:
+  langfuse-redis:
+  langfuse-minio:
