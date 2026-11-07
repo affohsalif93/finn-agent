@@ -1,0 +1,201 @@
+{
+  "contract_id": "V3",
+  "schema_version": 2,
+  "name_de": "Landesbank",
+  "document": {
+    "file": "Vertrag_3_Landesbank_Investitionsdarlehen.pdf",
+    "sha256": "3c4e5da78bca7ca8e35694e05ffcaef2a822de871aa4d34e4ac6f7cfa262abf9",
+    "pages": 13,
+    "date": "2025-06-20"
+  },
+  "parties": {
+    "lender": "Landesbank Mittelland",
+    "lender_members": [],
+    "borrower": "Stadtwerke Musterstadt GmbH"
+  },
+  "amount_eur": "40000000.00",
+  "accounting_basis": {"standard": "HGB", "entity": "single", "frozen_methods_source_id": "S_GAAP"},
+  "has_financial_covenants": true,
+  "no_covenant_reason": null,
+  "sources": [
+    {"id": "S_TITEL", "page": 1, "section": "Vertragskopf",
+     "quote": "Investitionsdarlehen Nr. LBM-INV-2025-0412 über EUR 40.000.000,00 in zwei Tranchen"},
+    {"id": "S_DEFREF", "page": 1, "section": "§ 1 Abs. 1",
+     "quote": "Die in diesem Vertrag mit großem Anfangsbuchstaben verwendeten Begriffe haben die in Anlage 3 (Begriffsbestimmungen und Berechnung der Finanzkennzahl) festgelegte Bedeutung, soweit sie nicht in diesem Vertrag selbst definiert sind."},
+    {"id": "S_GAAP", "page": 2, "section": "§ 1 Abs. 3",
+     "quote": "Bezugnahmen auf den Jahresabschluss beziehen sich auf den nach den Vorschriften des HGB aufgestellten, geprüften und festgestellten Einzelabschluss der Kreditnehmerin."},
+    {"id": "S_TRANCHEN", "page": 2, "section": "§ 2 Abs. 2",
+     "quote": "a) Tranche A über EUR 25.000.000,00, abrufbar bis zum 31. Dezember 2025; b) Tranche B über EUR 15.000.000,00, abrufbar ab dem 1. Januar 2027 bis zum 30. Juni 2027."},
+    {"id": "S_TRB_COND", "page": 2, "section": "§ 4 Abs. 3",
+     "quote": "Voraussetzung für die Auszahlung der Tranche B ist zusätzlich, dass der Bank die Kennzahlenbescheinigung für das Geschäftsjahr 2025 vorliegt und der darin ausgewiesene Schuldendienstdeckungsgrad die Anforderungen des § 13 erfüllt."},
+    {"id": "S_TILG_A", "page": 3, "section": "§ 7 Abs. 1",
+     "quote": "Die Tranche A ist in vierteljährlichen Raten von EUR 750.000,00 zu tilgen, fällig jeweils an den Zinszahlungstagen, erstmals am 31. März 2026."},
+    {"id": "S_TILG_B", "page": 3, "section": "§ 7 Abs. 2",
+     "quote": "Die Tranche B ist in vierteljährlichen Raten von EUR 375.000,00 zu tilgen, fällig jeweils an den Zinszahlungstagen, erstmals am 31. März 2028 und letztmals am 31. Dezember 2037."},
+    {"id": "S_TILGPLAN", "page": 10, "section": "Anlage 1 (Tilgungsplan)",
+     "quote": "31.03.2027 750.000,00 21.250.000,00 0,00 0,00 21.250.000,00 30.06.2027 750.000,00 20.500.000,00 0,00 15.000.000,00 35.500.000,00 30.09.2027 750.000,00 19.750.000,00 0,00 15.000.000,00 34.750.000,00 31.12.2027 750.000,00 19.000.000,00 0,00 15.000.000,00 34.000.000,00"},
+    {"id": "S_PLAN", "page": 5, "section": "§ 12 Abs. 1 lit. c",
+     "quote": "den Wirtschaftsplan für das folgende Geschäftsjahr bis spätestens 15. Dezember des laufenden Geschäftsjahres, und zwar auch dann, wenn er vom Aufsichtsrat noch nicht beschlossen ist (Entwurfsfassung), zusammen mit einer Berechnung des für das Planjahr erwarteten Schuldendienstdeckungsgrades;"},
+    {"id": "S_COV", "page": 5, "section": "§ 13 Abs. 1",
+     "quote": "Die Kreditnehmerin verpflichtet sich, für jedes Geschäftsjahr während der Laufzeit dieses Vertrages einen Schuldendienstdeckungsgrad von mindestens 1,30 einzuhalten."},
+    {"id": "S_TEST", "page": 5, "section": "§ 13 Abs. 2",
+     "quote": "Der Schuldendienstdeckungsgrad wird nach Maßgabe der Anlage 3 jeweils für das abgelaufene Geschäftsjahr auf Grundlage des festgestellten Jahresabschlusses berechnet und durch die Kennzahlenbescheinigung nach § 12 Absatz 1 lit. b) nachgewiesen."},
+    {"id": "S_PLANCHECK", "page": 6, "section": "§ 13 Abs. 3",
+     "quote": "Weist die nach § 12 Absatz 1 lit. c) übermittelte Planberechnung einen Schuldendienstdeckungsgrad von weniger als 1,30 aus, wird die Kreditnehmerin der Bank innerhalb von 30 Tagen darlegen, durch welche Maßnahmen sie die Einhaltung sicherstellen will."},
+    {"id": "S_CURE", "page": 6, "section": "§ 13 Abs. 4",
+     "quote": "Ein Unterschreiten des Mindestwertes nach Absatz 1 gilt als geheilt, wenn die Kreditnehmerin innerhalb von 30 Tagen nach Vorlage der Kennzahlenbescheinigung Eigenkapital in einer Höhe zuführt, die – rechnerisch dem Zähler des Schuldendienstdeckungsgrades hinzugerechnet – zur Einhaltung des Mindestwertes geführt hätte (Heilung). Eine Heilung ist höchstens zweimal während der Laufzeit und nicht in aufeinanderfolgenden Geschäftsjahren zulässig."},
+    {"id": "S_VERAEUSS", "page": 6, "section": "§ 14 Abs. 3",
+     "quote": "Als wesentlich gelten Veräußerungen, deren Buchwert im Geschäftsjahr insgesamt 10 % des Anlagevermögens gemäß dem zuletzt festgestellten Jahresabschluss übersteigt."},
+    {"id": "S_KG", "page": 7, "section": "§ 15 Abs. 1 lit. b",
+     "quote": "die Kreditnehmerin die Verpflichtung nach § 13 Absatz 1 verletzt und keine Heilung nach § 13 Absatz 4 erfolgt;"},
+    {"id": "S_DRITTV", "page": 7, "section": "§ 15 Abs. 1 lit. e",
+     "quote": "Finanzverbindlichkeiten der Kreditnehmerin von insgesamt mehr als EUR 3.000.000,00 aufgrund eines Kündigungsgrundes vorzeitig fällig gestellt werden oder bei Fälligkeit nicht bezahlt werden (Drittverzug);"},
+    {"id": "S_A3_EBITDA", "page": 13, "section": "Anlage 3 (2)",
+     "quote": "EBITDA bezeichnet für den Berechnungszeitraum den Jahresüberschuss bzw. Jahresfehlbetrag der Kreditnehmerin gemäß Gewinn- und Verlustrechnung a) zuzüglich der Steuern vom Einkommen und vom Ertrag, b) zuzüglich der Zinsen und ähnlichen Aufwendungen, c) abzüglich der sonstigen Zinsen und ähnlichen Erträge, d) zuzüglich der Abschreibungen auf immaterielle Vermögensgegenstände des Anlagevermögens und Sachanlagen, e) zuzüglich bzw. abzüglich außerordentlicher Aufwendungen bzw. Erträge, soweit diese im Anhang des Jahresabschlusses gemäß § 285 Nr. 31 HGB gesondert angegeben sind."},
+    {"id": "S_A3_FV", "page": 13, "section": "Anlage 3 (3)",
+     "quote": "Finanzverbindlichkeiten bezeichnet sämtliche Verbindlichkeiten der Kreditnehmerin aus (a) Darlehen und Krediten von Kreditinstituten, (b) Schuldscheindarlehen, Anleihen und ähnlichen Schuldtiteln, (c) Finanzierungsleasingverträgen, soweit sie nach HGB bilanziert sind, sowie (d) Darlehen von Gesellschaftern und sonstigen Dritten, und zwar unabhängig davon, ob für diese Darlehen ein Rangrücktritt vereinbart ist. Verbindlichkeiten aus Lieferungen und Leistungen sowie Rückstellungen sind keine Finanzverbindlichkeiten."},
+    {"id": "S_A3_SD", "page": 13, "section": "Anlage 3 (4)",
+     "quote": "Schuldendienst bezeichnet für den Berechnungszeitraum die Summe aus a) dem Zinsaufwand für Finanzverbindlichkeiten; Zinsaufwendungen aus der Aufzinsung von Rückstellungen (insbesondere Pensionsrückstellungen) sind nicht einzubeziehen, und b) den im Berechnungszeitraum fälligen planmäßigen Tilgungsleistungen auf Finanzverbindlichkeiten. Nicht einzubeziehen sind freiwillige Sondertilgungen, vorzeitige Rückzahlungen sowie Rückzahlungen, die aus einer Refinanzierung geleistet werden, und Endfälligkeitsbeträge (Bullet-Zahlungen), soweit sie refinanziert werden."},
+    {"id": "S_A3_ST", "page": 13, "section": "Anlage 3 (5)",
+     "quote": "Ertragsteuern bezeichnet die in der Gewinn- und Verlustrechnung für den Berechnungszeitraum ausgewiesenen Steuern vom Einkommen und vom Ertrag."},
+    {"id": "S_A3_DSCR", "page": 13, "section": "Anlage 3 (6)",
+     "quote": "Der Schuldendienstdeckungsgrad (Debt Service Coverage Ratio, DSCR) ist der Quotient aus a) EBITDA abzüglich Ertragsteuern (Zähler) und b) Schuldendienst (Nenner), jeweils für denselben Berechnungszeitraum."},
+    {"id": "S_A3_RUND", "page": 13, "section": "Anlage 3 (6)",
+     "quote": "Der Schuldendienstdeckungsgrad ist auf zwei Nachkommastellen kaufmännisch zu runden."},
+    {"id": "S_A3_PLAN", "page": 13, "section": "Anlage 3 (7)",
+     "quote": "Für die Berechnung nach § 12 Absatz 1 lit. c) und § 13 Absatz 3 sind die Planwerte des Wirtschaftsplans (Erfolgsplan und Finanzplan bzw. Darlehensspiegel) für das jeweilige Planjahr entsprechend zugrunde zu legen."},
+    {"id": "S_A3_BSP", "page": 13, "section": "Anlage 3 (8)",
+     "quote": "Beispielrechnung (nur zur Veranschaulichung, keine Planzahlen der Kreditnehmerin): EBITDA 20.000; Ertragsteuern 1.500; Zinsaufwand für Finanzverbindlichkeiten 3.000; planmäßige Tilgungen 9.000; Sondertilgung 2.000. Schuldendienst = 3.000 + 9.000 = 12.000; Schuldendienstdeckungsgrad = (20.000 − 1.500) / 12.000 = 1,54."}
+  ],
+  "loans": [
+    {
+      "loan_id": "V3",
+      "match": {"loan_number": "LBM-INV-2025-0412", "label_patterns": ["Landesbank"]},
+      "tranches": [
+        {"tranche_id": "A", "amount_eur": "25000000.00", "source_id": "S_TRANCHEN"},
+        {"tranche_id": "B", "amount_eur": "15000000.00", "source_id": "S_TRANCHEN"}
+      ],
+      "repayment_schedule": [
+        {"date": "2027-03-31", "amount_eur": "750000.00", "tranche": "A"},
+        {"date": "2027-06-30", "amount_eur": "750000.00", "tranche": "A"},
+        {"date": "2027-09-30", "amount_eur": "750000.00", "tranche": "A"},
+        {"date": "2027-12-31", "amount_eur": "750000.00", "tranche": "A"},
+        {"date": "2028-03-31", "amount_eur": "750000.00", "tranche": "A"},
+        {"date": "2028-03-31", "amount_eur": "375000.00", "tranche": "B"},
+        {"date": "2028-06-30", "amount_eur": "750000.00", "tranche": "A"},
+        {"date": "2028-06-30", "amount_eur": "375000.00", "tranche": "B"},
+        {"date": "2028-09-30", "amount_eur": "750000.00", "tranche": "A"},
+        {"date": "2028-09-30", "amount_eur": "375000.00", "tranche": "B"},
+        {"date": "2028-12-31", "amount_eur": "750000.00", "tranche": "A"},
+        {"date": "2028-12-31", "amount_eur": "375000.00", "tranche": "B"}
+      ],
+      "source_id": "S_TILGPLAN"
+    }
+  ],
+  "conditions": {},
+  "definitions": {
+    "ebitda": {
+      "term": "EBITDA",
+      "components": [
+        {"item": "net_income", "weight": "1", "source_id": "S_A3_EBITDA"},
+        {"item": "income_taxes", "weight": "1", "source_id": "S_A3_EBITDA"},
+        {"item": "interest_expense", "weight": "1", "source_id": "S_A3_EBITDA"},
+        {"item": "interest_income", "weight": "-1", "source_id": "S_A3_EBITDA"},
+        {"item": "depreciation", "weight": "1", "source_id": "S_A3_EBITDA"},
+        {"item": "extraordinary_items", "weight": "1", "if_missing": "assume_zero_info", "source_id": "S_A3_EBITDA"}
+      ],
+      "source_id": "S_A3_EBITDA"
+    },
+    "financial_debt": {
+      "term": "Finanzverbindlichkeiten",
+      "components": [
+        {"item": "bank_debt", "weight": "1", "source_id": "S_A3_FV"},
+        {"item": "bonds", "weight": "1", "if_missing": "assume_zero_warn", "source_id": "S_A3_FV"},
+        {"item": "finance_leases", "weight": "1", "if_missing": "assume_zero_warn", "source_id": "S_A3_FV"},
+        {"item": "shareholder_loan", "weight": "1", "source_id": "S_A3_FV"}
+      ],
+      "exclusions": [
+        {"text": "Verbindlichkeiten aus Lieferungen und Leistungen sowie Rückstellungen", "source_id": "S_A3_FV"}
+      ],
+      "clarifications": [
+        {"text": "Gesellschafterdarlehen zählen unabhängig von einem Rangrücktritt zu den Finanzverbindlichkeiten (auch bei Tilgung und Zinsen im Schuldendienst)", "source_id": "S_A3_FV"}
+      ],
+      "source_id": "S_A3_FV"
+    },
+    "debt_service": {
+      "term": "Schuldendienst",
+      "components": [
+        {"item": "interest_on_financial_debt", "weight": "1", "source_id": "S_A3_SD"},
+        {"item": "scheduled_repayments_total", "weight": "1",
+         "loan_filters": ["exclude_special_repayments", "exclude_refinancing", "exclude_bullet_if_refinanced"],
+         "source_id": "S_A3_SD"}
+      ],
+      "exclusions": [
+        {"text": "Zinsaufwand aus der Aufzinsung von Rückstellungen (insbesondere Pensionsrückstellungen)", "source_id": "S_A3_SD"},
+        {"text": "freiwillige Sondertilgungen, vorzeitige Rückzahlungen, Rückzahlungen aus Refinanzierung, refinanzierte Endfälligkeiten", "source_id": "S_A3_SD"}
+      ],
+      "clarifications": [
+        {"text": "planmäßige Tilgungen und Zinsen auf alle Finanzverbindlichkeiten laut Darlehensspiegel, einschließlich Gesellschafterdarlehen (Anlage 3 (3))", "source_id": "S_A3_FV"}
+      ],
+      "source_id": "S_A3_SD"
+    }
+  },
+  "covenants": [
+    {
+      "covenant_id": "V3-DSCR",
+      "metric_type": "dscr",
+      "name_in_contract": "Schuldendienstdeckungsgrad (DSCR)",
+      "numerator": [
+        {"ref": "ebitda", "weight": "1", "source_id": "S_A3_DSCR"},
+        {"item": "income_taxes", "weight": "-1", "source_id": "S_A3_ST"}
+      ],
+      "denominator": [{"ref": "debt_service", "weight": "1", "source_id": "S_A3_DSCR"}],
+      "operator": ">=",
+      "thresholds": [{"from_year": 2025, "value": "1.30"}],
+      "unit": "ratio",
+      "rounding": {"decimals": 2, "method": "half_up", "source_id": "S_A3_RUND"},
+      "test": {"frequency": "annual", "date": "12-31", "basis": "annual_accounts", "first_test": "2025-12-31", "source_id": "S_TEST"},
+      "plan_check": {
+        "applies": true,
+        "consequence": "measures_required",
+        "plan_basis": ["erfolgsplan", "darlehensspiegel"],
+        "plan_status_required": null,
+        "deadline": "12-15",
+        "actions": [{"type": "present_measures", "by": "borrower", "within_days": 30, "source_id": "S_PLANCHECK"}],
+        "source_id": "S_PLANCHECK",
+        "duty_source_id": "S_PLAN"
+      },
+      "breach_consequence": {"type": "termination", "window_days": null, "source_id": "S_KG", "more_source_ids": []},
+      "cure": {"allowed": true, "mechanism": "add_to_numerator", "window_days": 30, "max_count": 2, "consecutive_allowed": false, "source_id": "S_CURE"},
+      "source_id": "S_COV",
+      "unmapped_components": []
+    }
+  ],
+  "pricing_grid": null,
+  "examples": [
+    {
+      "covenant_id": "V3-DSCR",
+      "inputs": {
+        "ebitda": "20000",
+        "income_taxes": "1500",
+        "interest_on_financial_debt": "3000",
+        "scheduled_repayments_total": "9000",
+        "special_repayments_total": "2000"
+      },
+      "expected": "1.54",
+      "source_id": "S_A3_BSP"
+    }
+  ],
+  "dismissed_mentions": [
+    {"source_id": "S_TRB_COND", "category": "drawdown_condition",
+     "reason": "Auszahlungsvoraussetzung Tranche B: DSCR 2025 laut Kennzahlenbescheinigung (§ 4 Abs. 3), verweist auf § 13, kein eigener Covenant."},
+    {"source_id": "S_VERAEUSS", "category": "general_undertaking",
+     "reason": "Veräußerungsgrenze 10 % des Anlagevermögens (§ 14 Abs. 3), allgemeine Verpflichtung."},
+    {"source_id": "S_DRITTV", "category": "cross_default",
+     "reason": "Drittverzug ab EUR 3 Mio. (§ 15 Abs. 1 lit. e), Kündigungsgrund, keine Finanzkennzahl."}
+  ],
+  "label_hints": {},
+  "review": {"status": "reviewed", "reviewed_by": "gold (hand-written)", "reviewed_at": "2026-11-07",
+             "notes": "Definitionen aus Anlage 3; Planbasis nach Anlage 3 (7); Beispielrechnung Anlage 3 (8) als Selbsttest."},
+  "extraction": null
+}

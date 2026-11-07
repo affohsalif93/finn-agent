@@ -1,0 +1,75 @@
+{
+  "contract_id": "V1",
+  "schema_version": 2,
+  "name_de": "Sparkasse",
+  "document": {
+    "file": "Vertrag_1_Sparkasse_Investitionsdarlehen.pdf",
+    "sha256": "06ccae3fa0955108c43e523cf74ed488ef20a2482102a2a53479942a75138284",
+    "pages": 13,
+    "date": "2021-03-15"
+  },
+  "parties": {
+    "lender": "Sparkasse Musterstadt",
+    "lender_members": [],
+    "borrower": "Stadtwerke Musterstadt GmbH"
+  },
+  "amount_eur": "25000000.00",
+  "accounting_basis": {"standard": "HGB", "entity": "single", "frozen_methods_source_id": null},
+  "has_financial_covenants": false,
+  "no_covenant_reason": {
+    "text": "Die Kennzahlen der Präambel (bilanzielle Eigenkapitalquote 28,4 %, dynamischer Verschuldungsgrad 2,9) beschreiben die Lage zum 31.12.2019 und sind keine Verpflichtungen; § 14 enthält nur allgemeine Verpflichtungen, § 10 Abs. 4 (Nr. 22 AGB-Sparkassen) ist ein Recht auf Verstärkung von Sicherheiten, keine Kennzahl.",
+    "source_id": "S_PRAEAMBEL"
+  },
+  "sources": [
+    {"id": "S_TITEL", "page": 1, "section": "Vertragskopf",
+     "quote": "Investitionsdarlehen Nr. 4471 203 118 über EUR 25.000.000,00"},
+    {"id": "S_PRAEAMBEL", "page": 1, "section": "Präambel",
+     "quote": "Zum 31. Dezember 2019 wies die Kreditnehmerin eine bilanzielle Eigenkapitalquote von 28,4 % und einen dynamischen Verschuldungsgrad (Nettofinanzverbindlichkeiten zu EBITDA) von 2,9 aus."},
+    {"id": "S_TILG", "page": 3, "section": "§ 7 Abs. 1",
+     "quote": "Das Darlehen ist nach zwei tilgungsfreien Jahren in zwanzig gleichen jährlichen Raten zu je EUR 1.250.000,00 zu tilgen. Die Tilgungsraten sind jeweils am 30. Dezember eines Jahres fällig, erstmals am 30. Dezember 2023 und letztmals am 30. Dezember 2042."},
+    {"id": "S_TILGPLAN", "page": 11, "section": "Anlage 1 (Tilgungsplan)",
+     "quote": "2026 21.250.000,00 595.000,00 1.250.000,00 20.000.000,00 2027 20.000.000,00 560.000,00 1.250.000,00 18.750.000,00 2028 18.750.000,00 525.000,00 1.250.000,00 17.500.000,00"},
+    {"id": "S_AGB22", "page": 5, "section": "§ 10 Abs. 4",
+     "quote": "Im Übrigen gilt Nr. 22 der AGB-Sparkassen (Bestellung oder Verstärkung von Sicherheiten). Die Sparkasse kann eine Verstärkung von Sicherheiten verlangen, wenn sich die wirtschaftlichen Verhältnisse der Kreditnehmerin oder der Wert der Sicherheiten nachteilig verändert haben oder zu verändern drohen."},
+    {"id": "S_VERAEUSS", "page": 7, "section": "§ 14 Abs. 3",
+     "quote": "Als wesentlich gelten Veräußerungen, deren Buchwert im Geschäftsjahr insgesamt 10 % des Anlagevermögens gemäß dem zuletzt festgestellten Jahresabschluss übersteigt."},
+    {"id": "S_DRITTV", "page": 7, "section": "§ 15 Abs. 1 lit. g",
+     "quote": "andere Finanzverbindlichkeiten der Kreditnehmerin in Höhe von insgesamt mehr als EUR 2.500.000,00 wegen eines Kündigungsgrundes vorzeitig fällig gestellt werden (Drittverzug)."},
+    {"id": "S_SONDERTILG", "page": 4, "section": "§ 8 Abs. 2",
+     "quote": "Abweichend von Absatz 1 ist die Kreditnehmerin berechtigt, einmal je Kalenderjahr, erstmals im Jahr 2026, eine Sondertilgung von bis zu EUR 1.000.000,00 ohne Vorfälligkeitsentschädigung zu leisten."}
+  ],
+  "loans": [
+    {
+      "loan_id": "V1",
+      "match": {"loan_number": "4471 203 118", "label_patterns": ["Sparkasse Musterstadt"]},
+      "tranches": [],
+      "repayment_schedule": [
+        {"date": "2026-12-30", "amount_eur": "1250000.00"},
+        {"date": "2027-12-30", "amount_eur": "1250000.00"},
+        {"date": "2028-12-30", "amount_eur": "1250000.00"}
+      ],
+      "source_id": "S_TILGPLAN"
+    }
+  ],
+  "conditions": {},
+  "definitions": {},
+  "covenants": [],
+  "pricing_grid": null,
+  "examples": [],
+  "dismissed_mentions": [
+    {"source_id": "S_PRAEAMBEL", "category": "historical_figure",
+     "reason": "Eigenkapitalquote 28,4 % und dynamischer Verschuldungsgrad 2,9 beschreiben die Lage zum 31.12.2019 (Grundlage der Kreditentscheidung), keine Verpflichtung."},
+    {"source_id": "S_AGB22", "category": "collateral_right",
+     "reason": "Recht auf Verstärkung von Sicherheiten bei nachteiliger Veränderung (Nr. 22 AGB-Sparkassen), kein Schwellenwert."},
+    {"source_id": "S_VERAEUSS", "category": "general_undertaking",
+     "reason": "Veräußerungsgrenze 10 % des Anlagevermögens (§ 14 Abs. 3), allgemeine Verpflichtung."},
+    {"source_id": "S_DRITTV", "category": "cross_default",
+     "reason": "Drittverzug ab EUR 2,5 Mio. (§ 15 Abs. 1 lit. g), Kündigungsgrund, keine Finanzkennzahl."},
+    {"source_id": "S_SONDERTILG", "category": "other",
+     "reason": "Sondertilgungsrecht bis EUR 1 Mio. p. a. (§ 8 Abs. 2), keine Kennzahl."}
+  ],
+  "label_hints": {},
+  "review": {"status": "reviewed", "reviewed_by": "gold (hand-written)", "reviewed_at": "2026-11-07",
+             "notes": "Handgeschriebenes Referenzprofil für Tests und die Extraktions-Evaluation."},
+  "extraction": null
+}

@@ -55,6 +55,23 @@ class ErrorCode(StrEnum):
     PLAN_SIGNS = "PLAN_SIGNS"
     PLAN_IMPLAUSIBLE = "PLAN_IMPLAUSIBLE"
     PLAN_STATUS = "PLAN_STATUS"
+    PLAN_STATUS_REQUIRED = "PLAN_STATUS_REQUIRED"
+    PLAN_ITEM_NOT_IN_PLAN = "PLAN_ITEM_NOT_IN_PLAN"
+    PLAN_REPAYMENT_DIFFERS = "PLAN_REPAYMENT_DIFFERS"
+    PLAN_LOAN_AMBIGUOUS = "PLAN_LOAN_AMBIGUOUS"
+    # G. Contracts and profiles
+    CONTRACT_CHANGED = "CONTRACT_CHANGED"
+    CONTRACT_NEW_FILE = "CONTRACT_NEW_FILE"
+    PROFILE_MISSING = "PROFILE_MISSING"
+    PROFILE_INVALID_RECIPE = "PROFILE_INVALID_RECIPE"
+    PROFILE_EXAMPLE_MISMATCH = "PROFILE_EXAMPLE_MISMATCH"
+    PROFILE_INVARIANT = "PROFILE_INVARIANT"
+    PROFILE_NOT_REVIEWED = "PROFILE_NOT_REVIEWED"
+    PROFILE_UNMAPPED = "PROFILE_UNMAPPED"
+    # H. Calculation
+    CALC_DENOMINATOR = "CALC_DENOMINATOR"
+    CALC_AT_THRESHOLD = "CALC_AT_THRESHOLD"
+    CALC_NO_ROUNDING_RULE = "CALC_NO_ROUNDING_RULE"
 
 
 # Default severity per code (FAILURES.md "Reaction"); a caller may override it.
@@ -88,6 +105,21 @@ SEVERITY: dict[ErrorCode, Severity] = {
     ErrorCode.PLAN_SIGNS: Severity.WARN,
     ErrorCode.PLAN_IMPLAUSIBLE: Severity.WARN,
     ErrorCode.PLAN_STATUS: Severity.INFO,
+    ErrorCode.PLAN_STATUS_REQUIRED: Severity.INFO,
+    ErrorCode.PLAN_ITEM_NOT_IN_PLAN: Severity.WARN,
+    ErrorCode.PLAN_REPAYMENT_DIFFERS: Severity.WARN,
+    ErrorCode.PLAN_LOAN_AMBIGUOUS: Severity.WARN,
+    ErrorCode.CONTRACT_CHANGED: Severity.WARN,
+    ErrorCode.CONTRACT_NEW_FILE: Severity.WARN,
+    ErrorCode.PROFILE_MISSING: Severity.PARTIAL,
+    ErrorCode.PROFILE_INVALID_RECIPE: Severity.PARTIAL,
+    ErrorCode.PROFILE_EXAMPLE_MISMATCH: Severity.WARN,
+    ErrorCode.PROFILE_INVARIANT: Severity.PARTIAL,
+    ErrorCode.PROFILE_NOT_REVIEWED: Severity.WARN,
+    ErrorCode.PROFILE_UNMAPPED: Severity.PARTIAL,
+    ErrorCode.CALC_DENOMINATOR: Severity.PARTIAL,
+    ErrorCode.CALC_AT_THRESHOLD: Severity.WARN,
+    ErrorCode.CALC_NO_ROUNDING_RULE: Severity.INFO,
 }
 
 # German reply templates, keyed by code (or "CODE.variant"); filled with str.format.
@@ -131,6 +163,44 @@ MESSAGES_DE: dict[str, str] = {
     "PLAN_IMPLAUSIBLE": "Auffälliger Wert: {detail}.",
     "PLAN_STATUS": "Entwurf vom {version_date}, nicht vom Aufsichtsrat genehmigt.",
     "PLAN_STATUS.undated": "Entwurf (ohne Datum), nicht vom Aufsichtsrat genehmigt.",
+    "PLAN_STATUS_REQUIRED": "Hinweis: {lender} verlangt den beschlossenen Wirtschaftsplan "
+    "({section}); der vorliegende Plan ist ein Entwurf.",
+    "PLAN_ITEM_NOT_IN_PLAN": "{covenant}: im Plan nicht ausgewiesen, mit 0 angesetzt: {labels}.",
+    "PLAN_REPAYMENT_DIFFERS": "Planmäßige Tilgung {year} {label}: Plan {plan} T€, laut Vertrag "
+    "{contract} {expected} T€.",
+    "PLAN_LOAN_AMBIGUOUS": "Darlehenszeile {label} nicht eindeutig einem Vertrag zuzuordnen "
+    "({contracts}); Tilgungsabgleich übersprungen.",
+    "PLAN_FACT_AMBIGUOUS.alternative": "{covenant}: {label} nicht eindeutig; angesetzt wird "
+    "konservativ {chosen}. Ergebnis {cases}: {values}.",
+    "PLAN_BULLET_IN_PLAN_YEAR.alternative": "{covenant}: Darlehen {label} endfällig {year}; "
+    "falls refinanziert, ist die Tilgung nicht einzubeziehen (dann {value}).",
+    "PLAN_IMPLAUSIBLE.ebitda": "{covenant}: EBITDA ≤ 0 ({value} T€), Verschuldungsgrad nicht "
+    "sinnvoll definiert.",
+    "PLAN_ITEM_MISSING.covenant": "{covenant} nicht berechenbar: {labels} fehlt im Plan.",
+    "CONTRACT_CHANGED": "Vertrag {contract} ({file}) wurde seit der Profilprüfung geändert; "
+    "Profil nicht neu geprüft.",
+    "CONTRACT_CHANGED.missing": "Vertragsdatei {file} zu {contract} nicht gefunden; Hash nicht "
+    "geprüft.",
+    "CONTRACT_NEW_FILE": "Neuer Vertrag ohne geprüftes Profil: {file}.",
+    "PROFILE_MISSING": "Vertragsprofil {file} konnte nicht geladen werden ({detail}); Vertrag "
+    "nicht geprüft.",
+    "PROFILE_INVALID_RECIPE": "Covenant {covenant} ({contract}) kann nicht automatisch berechnet "
+    "werden: {detail}.",
+    "PROFILE_INVALID_RECIPE.profile": "Vertragsprofil {file} enthält eine ungültige "
+    "Rechenvorschrift ({detail}); Vertrag nicht geprüft.",
+    "PROFILE_EXAMPLE_MISMATCH": "Beispielrechnung {contract} {covenant}: laut Vertrag {expected}, "
+    "berechnet {actual}.",
+    "PROFILE_INVARIANT": "Vertragsprofil {file} ist widersprüchlich ({detail}); Vertrag nicht "
+    "geprüft.",
+    "PROFILE_NOT_REVIEWED": "Vertragsprofil {contract} ist noch nicht fachlich geprüft.",
+    "PROFILE_UNMAPPED": "Covenant {covenant} enthält Bestandteile, die ich nicht automatisch "
+    "abbilde: {parts}.",
+    "PROFILE_UNMAPPED.assumption": "{covenant}: {text} – im Plan nicht abbildbar; Annahme: "
+    "{handling}.",
+    "CALC_DENOMINATOR": "{covenant}: Nenner = {value} ≤ 0, Kennzahl nicht definiert.",
+    "CALC_AT_THRESHOLD": "{covenant}: eingehalten, kein Spielraum ({value} = Grenzwert).",
+    "CALC_NO_ROUNDING_RULE": "{covenant}: Vertrag nennt keine Rundung; gerechnet mit "
+    "2 Nachkommastellen (kaufmännisch).",
 }
 
 

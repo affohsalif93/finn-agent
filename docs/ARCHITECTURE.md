@@ -47,7 +47,7 @@ At runtime the LLM only classifies the request and writes the text. **No number 
 
 ### 2.3 Data contracts
 
-Every arrow is one Temporal activity, every box one Pydantic model (`src/finn/models.py` is the source of truth; this is the overview). Money is `Decimal`, serialised as a string.
+Every arrow is one Temporal activity, every box one Pydantic model (`src/finn/models/` is the source of truth; this is the overview). Money is `Decimal`, serialised as a string.
 
 ```
 InboundMessage ─parse_message─► ParsedMessage ─classify_intent─► Request
@@ -101,16 +101,17 @@ Finding:          code (FAILURES.md), severity: REJECT|IGNORE|ASK|BLOCK|PARTIAL|
 PlanReadResult:   plan: Plan|None, findings: list[Finding], mapping_log
 
 # ── Contracts (onboarding, reviewed JSON) ────────────
-ContractProfile:  §3 (covenants with recipes, sources, …)
+ContractProfile:  §3 (covenants with recipes, sources, …)   # models/contract.py
 
 # ── Calculation ──────────────────────────────────────
 CovenantResult:   covenant_id, contract_id, name_de,
                   status: met|breached|not_computable|manual_review,
                   value_raw, value_rounded, threshold, operator, unit,
                   headroom, headroom_unit: pp|ratio|T€, tight, sensitivity,
-                  components: list[Used|Excluded],   # each with PlanValue / evidence + contract source
-                  formula_de: str,                   # generated from the recipe, e.g. "(96.100 + 0,5 × 22.800) / 313.200"
-                  sources: list[ContractSource], reason: str|None
+                  components: {numerator, denominator}: list[Used|Excluded|AssumedZero]  # nested for refs
+                  formula_de: str,                   # generated from the trace, e.g. "(96.100 + 0,5 × 22.800) / 313.200"
+                  sub_formulas_de, alternatives (unclear plan facts), findings: list[Finding],
+                  sources: list[Source], reason: str|None          # models/result.py
 
 # ── Reply ────────────────────────────────────────────
 ReplyDraft:       to, subject, in_reply_to, references[], message_id (deterministic),
@@ -142,7 +143,9 @@ One JSON file per contract in `data/contract_profiles/`. Checked against all fou
 | `label_hints{}` | contract hints for finding a building block in the plan ("Netzanschlusskostenbeiträge" = Sonderposten) | plan reader synonyms |
 | `review`, `extraction` | `{status: draft\|reviewed, reviewed_by, reviewed_at, notes}`; `{model, prompt_version, extracted_at, source_sha256}` | only `reviewed` profiles are used without a warning (D2) |
 
-Invariant (validator): `has_financial_covenants == (len(covenants) > 0)`; if false, `no_covenant_reason` with a `source_id` is required.
+Invariant (validator): `has_financial_covenants == (len(covenants) > 0)`; if false, `no_covenant_reason` with a `source_id` is required. Every `source_id` must exist (`PROFILE_INVARIANT`, profile rejected). Recipe structure (refs resolve, no cycles, conditions exist) is checked **per covenant** by `calc/recipe.py`: a broken recipe makes only that covenant `manual_review` (`PROFILE_INVALID_RECIPE`).
+
+Added while writing the gold profiles: `name_de` (short contract name for the reply), `definitions.*.term`, `conditions.*.label_de`, `more_source_ids` (clauses continued on the next page), `plan_check.duty_source_id` (the plan-delivery duty, cited by `PLAN_STATUS_REQUIRED`), `unmapped_components[].effect`: `assumption` (computed, handling text reported as INFO, e.g. V4 (e)) | `manual_review`; `examples[].inputs` keyed by building block **or** definition id (V3 Anlage 3 (8) gives EBITDA directly); `cure: null` = contract silent (V2); `denominator` may be empty only for `unit: amount`.
 
 ### 3.2 Example: V4 syndicated loan (abridged, real values)
 
@@ -280,7 +283,7 @@ The **shape** of a covenant is standard (a ratio compared with a threshold). **W
 | Loan match | Nr. 4471 203 118 | Nr. FD-2022-08817 | Nr. LBM-INV-2025-0412 (tranches A, B) | "Konsortialkredit" / agent (Sparkasse is also a member!) |
 | Contract example | – | – | Anlage 3 (8): → 1.54 | – |
 | Dismissed numerics | preamble ratios; disposals 10 % fixed assets | disposals 10 % | disposals 10 %; Tranche B condition (DSCR 2025) | margin grid; disposals 7.5 % total assets; negative pledge / cross default EUR 5 M |
-| Plan repayment 2027 vs. contract | (check vs. Anlage 1) | 1,500 = 4 × 375 ✓ | 3,000 = 4 × 750 (Tranche A) ✓ | 3,000 ✓ |
+| Plan repayment 2027 vs. contract | 1,250 = Anlage 1 ✓ | 1,500 = 4 × 375 ✓ | 3,000 = 4 × 750 (Tranche A) ✓ | 3,000 ✓ |
 
 ## 4. Plan reader (D6)
 
@@ -415,7 +418,8 @@ def evaluate(recipe, blocks, facts) -> Evaluation:
 - Comparison uses the **rounded** value, as the contracts specify.
 - The `used` list is the calculation path in the mail; `formula_de` is generated from the same list, so what is shown is exactly what was computed.
 - **Tight** = headroom < 10 % of the threshold (configurable). Answer key: V4 equity ratio and V4 leverage are tight.
-- **Sensitivity:** for EBITDA-based covenants the EBITDA drop at which the covenant breaks; for equity ratios the equity drop. Rounding-aware, computed in code.
+- **Sensitivity:** for EBITDA-based covenants the EBITDA drop at which the covenant breaks; for equity ratios the equity drop (total assets unchanged, conservative). Rounding-aware: solved algebraically, then verified in whole T€ with the evaluator (sample: leverage 1,512 T€, equity ratio 2,296 T€).
+- **Tightest** = smallest of these drops in T€ (one scale across ratio types: V4 leverage 1,512 < V4 equity 2,296); relative headroom (headroom / threshold) would pick the V4 equity ratio (2.3 % vs. 3.7 %) and is only the fallback when a sensitivity is missing.
 - Type-specific rule: EBITDA ≤ 0 → leverage "nicht sinnvoll definiert" (`PLAN_IMPLAUSIBLE`).
 
 ### 5.2 Worked example: V4 dynamic leverage
@@ -770,17 +774,20 @@ src/finn/
 │   ├── checks.py          tie-outs, company/year, units, signs → Findings
 │   └── llm_mapping.py     step 2 (stretch): skeleton → LLM → mapping
 ├── calc/                  recipes → results
-│   ├── recipe.py          whitelist validation of recipes
+│   ├── recipe.py          structural validation of recipes, dependencies
 │   ├── evaluator.py       evaluate(recipe, blocks, facts)
 │   ├── rounding.py        contract rounding, headroom, tight flag
 │   ├── sensitivity.py     rounding-aware break points
-│   └── engine.py          all profiles × plan → Report
+│   ├── formula.py         formula_de from the component trace
+│   ├── render.py          text output for `finn check`
+│   └── engine.py          all profiles × plan → Report (+ loan checks, notes)
 ├── contracts/             onboarding + loading
 │   ├── pdf_text.py        page texts with page numbers (cached by hash)
 │   ├── extract.py         LLM extraction → draft profile (structured output)
 │   ├── prompts/           extraction + review prompts (versioned files)
 │   ├── validate.py        quotes exist on the page, schema, whitelist
 │   ├── completeness.py    keyword scan: every hit = covenant or dismissed with reason
+│   ├── selftest.py        run `examples` through the evaluator (`finn contracts check`)
 │   └── store.py           load profiles, hash check against material/
 │
 │ ── adapters ──

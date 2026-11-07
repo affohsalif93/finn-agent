@@ -119,13 +119,13 @@ Code checks these after the intent classification; anything missing → `ASK`.
 
 | Code | Failure | Detection | Reaction | Reply (DE, gist) | Built | Fixture |
 |---|---|---|---|---|---|---|
-| `CONTRACT_CHANGED` | contract file hash ≠ profile hash | hash at start | compute with the old profile; WARN | "Vertrag 4 wurde geändert; Profil nicht neu geprüft." | ✅ | test only |
+| `CONTRACT_CHANGED` | contract file hash ≠ profile hash | hash at start | compute with the old profile; WARN (also when the PDF is missing); `finn contracts check` fails | "Vertrag 4 wurde geändert; Profil nicht neu geprüft." | ✅ | test only |
 | `PROFILE_MISSING` | no / invalid profile | load + schema validation | that contract "nicht geprüft"; others continue | "Vertrag X konnte nicht geprüft werden." | ✅ | test only |
 | `PROFILE_INVALID_RECIPE` | recipe uses an item / condition / operation outside the whitelist | validation at onboarding and at load | that covenant `manual_review` | "Covenant … kann nicht automatisch berechnet werden." | ✅ | test profile |
 | `PROFILE_EXAMPLE_MISMATCH` | the recipe applied to the contract's own sample calculation doesn't give the printed result (V3 Anlage 3 (8): 1.54) | `finn contracts check` | profile stays `draft`; review required | (onboarding only, no mail) | ✅ | test profile |
 | `PROFILE_INVARIANT` | `has_financial_covenants` disagrees with `covenants[]`, or `no_covenant_reason` missing | schema validator | profile rejected | (onboarding only) | ✅ | test profile |
 | `PROFILE_NOT_REVIEWED` | profile `review.status = draft` used at runtime | load | compute; WARN | "Vertragsprofil V… ist noch nicht fachlich geprüft." | ✅ | test profile |
-| `PROFILE_UNMAPPED` | `unmapped_components` non-empty | profile | that covenant "manuelle Prüfung" | "Covenant … enthält Bestandteile, die ich nicht automatisch abbilde: …" | ✅ | test profile |
+| `PROFILE_UNMAPPED` | `unmapped_components` non-empty | profile | `effect: manual_review` → that covenant "manuelle Prüfung"; `effect: assumption` (the plan cannot show it either, V4 (e)) → computed, INFO with the handling text | "Covenant … enthält Bestandteile, die ich nicht automatisch abbilde: …" | ✅ | test profile |
 | `CONTRACT_NEW_FILE` | contract in the folder without a profile | folder scan | WARN; product: start onboarding | "Neuer Vertrag ohne geprüftes Profil: …" | ✅ detect | test only |
 
 ## H. Calculation

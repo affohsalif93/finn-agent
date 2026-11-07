@@ -9,6 +9,7 @@ dependencies = [
     "pydantic-settings>=2.16",
     "structlog>=26.1",
     "openpyxl>=3.1",
+    "pdfplumber>=0.11",
 ]
 
 [project.scripts]
@@ -50,8 +51,9 @@ select = [
     "DTZ",  # naive datetimes (deadlines, covenant dates)
     "PT",   # pytest style
 ]
-# German labels and numbers use typographic characters on purpose (plan titles, unit labels).
-allowed-confusables = ["–", "−"]
+# German labels and numbers use typographic characters on purpose (plan titles, unit labels,
+# formulas such as "0,5 × 22.800").
+allowed-confusables = ["–", "−", "×"]
 
 [tool.ruff.format]
 quote-style = "double"

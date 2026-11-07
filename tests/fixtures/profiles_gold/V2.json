@@ -1,0 +1,144 @@
+{
+  "contract_id": "V2",
+  "schema_version": 2,
+  "name_de": "Förderbank",
+  "document": {
+    "file": "Vertrag_2_Foerderbank_Foerderdarlehen.pdf",
+    "sha256": "7488d4c0bf422983f2081fc8fd8d6c7b5b1e8c7a03bea090c3bc701b5717c9d4",
+    "pages": 13,
+    "date": "2022-09-01"
+  },
+  "parties": {
+    "lender": "Förderbank Musterland",
+    "lender_members": [],
+    "borrower": "Stadtwerke Musterstadt GmbH"
+  },
+  "amount_eur": "30000000.00",
+  "accounting_basis": {"standard": "HGB", "entity": "single", "frozen_methods_source_id": "S_GAAP"},
+  "has_financial_covenants": true,
+  "no_covenant_reason": null,
+  "sources": [
+    {"id": "S_TITEL", "page": 1, "section": "Vertragskopf",
+     "quote": "Darlehens-Nr. FD-2022-08817 über EUR 30.000.000,00"},
+    {"id": "S_BS", "page": 1, "section": "§ 1 Abs. 1 „Bilanzsumme“",
+     "quote": "„Bilanzsumme“ bezeichnet die Summe der Aktiva gemäß dem nach § 12 Absatz 1 lit. a) vorzulegenden festgestellten Jahresabschluss der Kreditnehmerin zum jeweiligen Bilanzstichtag."},
+    {"id": "S_EK", "page": 1, "section": "§ 1 Abs. 1 „Eigenkapital“",
+     "quote": "„Eigenkapital“ bezeichnet das in der Bilanz der Kreditnehmerin gemäß § 266 Absatz 3 Buchstabe A HGB ausgewiesene Eigenkapital (gezeichnetes Kapital, Kapitalrücklage, Gewinnrücklagen, Gewinn-/Verlustvortrag und Jahresüberschuss/Jahresfehlbetrag bzw. Bilanzgewinn/Bilanzverlust), abzüglich eingeforderter, aber noch nicht eingezahlter Einlagen."},
+    {"id": "S_SOP", "page": 2, "section": "§ 1 Abs. 1 „Sonderposten“",
+     "quote": "„Sonderposten“ bezeichnet die in der Bilanz der Kreditnehmerin gesondert ausgewiesenen Sonderposten für Investitionszuschüsse und Baukostenzuschüsse (einschließlich Netzanschlusskostenbeiträgen), unabhängig von ihrer Bezeichnung im Einzelfall."},
+    {"id": "S_WEK", "page": 2, "section": "§ 1 Abs. 1 „Wirtschaftliches Eigenkapital“",
+     "quote": "„Wirtschaftliches Eigenkapital“ bezeichnet das Eigenkapital zuzüglich 50 % (fünfzig Prozent) der Sonderposten. Gesellschafterdarlehen, Rückstellungen und sonstige Fremdkapitalpositionen werden dem Wirtschaftlichen Eigenkapital nicht zugerechnet, auch wenn für sie ein Rangrücktritt vereinbart ist."},
+    {"id": "S_WEKQ", "page": 2, "section": "§ 1 Abs. 1 „Wirtschaftliche Eigenkapitalquote“",
+     "quote": "„Wirtschaftliche Eigenkapitalquote“ bezeichnet das Verhältnis des Wirtschaftlichen Eigenkapitals zur Bilanzsumme zum jeweiligen Bilanzstichtag, ausgedrückt in Prozent."},
+    {"id": "S_GAAP", "page": 2, "section": "§ 1 Abs. 2",
+     "quote": "Bilanzposten sind, soweit nicht ausdrücklich anders bestimmt, nach den Vorschriften des Handelsgesetzbuches in der am Bilanzstichtag geltenden Fassung und unter Beibehaltung der bei Abschluss dieses Vertrages angewandten Bilanzierungs- und Bewertungsmethoden zu ermitteln."},
+    {"id": "S_TILG", "page": 3, "section": "§ 7 Abs. 1",
+     "quote": "Nach Ablauf der tilgungsfreien Anlaufzeit ist das Darlehen in 80 gleich hohen vierteljährlichen Raten von je EUR 375.000,00 zu tilgen, fällig jeweils zu den Zahlungsterminen, erstmals am 31. März 2024 und letztmals am 31. Dezember 2043."},
+    {"id": "S_TILGPLAN", "page": 10, "section": "Anlage 1 (Tilgungsplan)",
+     "quote": "31.03.2027 25.500.000,00 89.250,00 375.000,00 25.125.000,00 30.06.2027 25.125.000,00 87.937,50 375.000,00 24.750.000,00 30.09.2027 24.750.000,00 86.625,00 375.000,00 24.375.000,00 31.12.2027 24.375.000,00 85.312,50 375.000,00 24.000.000,00"},
+    {"id": "S_PLAN", "page": 5, "section": "§ 12 Abs. 1 lit. c",
+     "quote": "den beschlossenen Wirtschaftsplan für das jeweils folgende Geschäftsjahr bis zum 31. Januar des Geschäftsjahres, zusammen mit einer Vorschau der Wirtschaftlichen Eigenkapitalquote zum Ende dieses Geschäftsjahres auf Basis der Planbilanz;"},
+    {"id": "S_NOTIFY", "page": 5, "section": "§ 12 Abs. 3",
+     "quote": "Die Kreditnehmerin wird die Förderbank unverzüglich über jeden Umstand unterrichten, der eine Verletzung der Verpflichtung nach § 13 erwarten lässt."},
+    {"id": "S_COV", "page": 6, "section": "§ 13 Abs. 1",
+     "quote": "Die Kreditnehmerin verpflichtet sich, während der gesamten Laufzeit dieses Vertrages zu jedem Bilanzstichtag eine Wirtschaftliche Eigenkapitalquote von mindestens 27,5 % einzuhalten."},
+    {"id": "S_TEST", "page": 6, "section": "§ 13 Abs. 2",
+     "quote": "Die Einhaltung wird jährlich auf Grundlage des festgestellten Jahresabschlusses und der Kennzahlenbescheinigung nach § 12 Absatz 1 lit. b) überprüft, erstmals zum Bilanzstichtag 31. Dezember 2022."},
+    {"id": "S_PLANCHECK", "page": 6, "section": "§ 13 Abs. 3",
+     "quote": "Ergibt die Vorschau nach § 12 Absatz 1 lit. c), dass die Mindestquote zum Ende des Planjahres voraussichtlich unterschritten wird, werden die Parteien unverzüglich Gespräche über geeignete Maßnahmen aufnehmen. Eine solche Vorschau begründet für sich genommen keinen Kündigungsgrund."},
+    {"id": "S_BREACH", "page": 6, "section": "§ 13 Abs. 4",
+     "quote": "Bei einer Unterschreitung der Mindestquote ist die Förderbank berechtigt, (a) eine angemessene Besicherung zu verlangen oder (b) nach Maßgabe von § 15 Absatz 1 lit. d) zu kündigen."},
+    {"id": "S_KG", "page": 7, "section": "§ 15 Abs. 1 lit. d",
+     "quote": "die Wirtschaftliche Eigenkapitalquote zu einem Bilanzstichtag die Mindestquote nach § 13 Absatz 1 unterschreitet und die Kreditnehmerin nicht innerhalb von 60 Tagen nach Aufforderung eine nach § 13 Absatz 4 lit. a) verlangte Sicherheit stellt;"},
+    {"id": "S_VERAEUSS", "page": 6, "section": "§ 14 Abs. 3",
+     "quote": "Als wesentlich gelten Veräußerungen, deren Buchwert im Geschäftsjahr insgesamt 10 % des Anlagevermögens gemäß dem zuletzt festgestellten Jahresabschluss übersteigt."},
+    {"id": "S_BEIHILFE", "page": 4, "section": "§ 10 Abs. 2",
+     "quote": "Der Beihilfewert des Darlehens wurde mit EUR 3.412.000,00 berechnet und der Kreditnehmerin mitgeteilt."}
+  ],
+  "loans": [
+    {
+      "loan_id": "V2",
+      "match": {"loan_number": "FD-2022-08817", "label_patterns": ["Förderbank"]},
+      "tranches": [],
+      "repayment_schedule": [
+        {"date": "2027-03-31", "amount_eur": "375000.00"},
+        {"date": "2027-06-30", "amount_eur": "375000.00"},
+        {"date": "2027-09-30", "amount_eur": "375000.00"},
+        {"date": "2027-12-31", "amount_eur": "375000.00"}
+      ],
+      "source_id": "S_TILGPLAN"
+    }
+  ],
+  "conditions": {},
+  "definitions": {
+    "equity": {
+      "term": "Eigenkapital",
+      "components": [
+        {"item": "equity", "weight": "1", "source_id": "S_EK"},
+        {"item": "called_unpaid_capital", "weight": "-1", "if_missing": "assume_zero_info", "source_id": "S_EK"}
+      ],
+      "source_id": "S_EK"
+    },
+    "economic_equity": {
+      "term": "Wirtschaftliches Eigenkapital",
+      "components": [
+        {"ref": "equity", "weight": "1", "source_id": "S_WEK"},
+        {"item": "sonderposten", "weight": "0.5", "source_id": "S_WEK"}
+      ],
+      "exclusions": [
+        {"text": "Gesellschafterdarlehen, Rückstellungen und sonstige Fremdkapitalpositionen, auch mit Rangrücktritt", "source_id": "S_WEK"}
+      ],
+      "source_id": "S_WEK"
+    },
+    "total_assets": {
+      "term": "Bilanzsumme",
+      "components": [{"item": "total_assets", "weight": "1", "source_id": "S_BS"}],
+      "source_id": "S_BS"
+    }
+  },
+  "covenants": [
+    {
+      "covenant_id": "V2-WEKQ",
+      "metric_type": "economic_equity_ratio",
+      "name_in_contract": "Wirtschaftliche Eigenkapitalquote",
+      "numerator": [{"ref": "economic_equity", "weight": "1", "source_id": "S_WEKQ"}],
+      "denominator": [{"ref": "total_assets", "weight": "1", "source_id": "S_WEKQ"}],
+      "operator": ">=",
+      "thresholds": [{"from_year": 2022, "value": "27.5"}],
+      "unit": "percent",
+      "rounding": {"decimals": null, "method": "half_up", "source_id": null},
+      "test": {"frequency": "annual", "date": "12-31", "basis": "annual_accounts", "first_test": "2022-12-31", "source_id": "S_TEST"},
+      "plan_check": {
+        "applies": true,
+        "consequence": "early_warning_only",
+        "plan_basis": ["planbilanz"],
+        "plan_status_required": "approved",
+        "deadline": "01-31",
+        "actions": [
+          {"type": "notify_immediately", "by": "borrower", "source_id": "S_NOTIFY"},
+          {"type": "talks", "by": "parties", "source_id": "S_PLANCHECK"}
+        ],
+        "source_id": "S_PLANCHECK",
+        "duty_source_id": "S_PLAN"
+      },
+      "breach_consequence": {"type": "collateral_then_termination", "window_days": 60, "source_id": "S_BREACH", "more_source_ids": ["S_KG"]},
+      "cure": null,
+      "source_id": "S_COV",
+      "unmapped_components": []
+    }
+  ],
+  "pricing_grid": null,
+  "examples": [],
+  "dismissed_mentions": [
+    {"source_id": "S_VERAEUSS", "category": "general_undertaking",
+     "reason": "Veräußerungsgrenze 10 % des Anlagevermögens (§ 14 Abs. 3), allgemeine Verpflichtung."},
+    {"source_id": "S_BEIHILFE", "category": "other",
+     "reason": "Beihilfewert des Darlehens (§ 10 Abs. 2), keine Kennzahl."}
+  ],
+  "label_hints": {
+    "sonderposten": ["Sonderposten für Investitionszuschüsse", "Baukostenzuschüsse", "Netzanschlusskostenbeiträge"]
+  },
+  "review": {"status": "reviewed", "reviewed_by": "gold (hand-written)", "reviewed_at": "2026-11-07",
+             "notes": "Keine Rundungsregel im Vertrag: 2 Nachkommastellen, als Hinweis ausgewiesen."},
+  "extraction": null
+}

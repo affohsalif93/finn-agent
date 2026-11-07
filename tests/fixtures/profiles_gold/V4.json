@@ -1,0 +1,253 @@
+{
+  "contract_id": "V4",
+  "schema_version": 2,
+  "name_de": "Konsortialkredit",
+  "document": {
+    "file": "Vertrag_4_Konsortialkredit.pdf",
+    "sha256": "9bdd1f862165681bf44bcd5ece1d765dddf644f6a6415da1644d97ea1d0b1a4d",
+    "pages": 13,
+    "date": "2023-11-30"
+  },
+  "parties": {
+    "lender": "Weserland Bank AG (Agent)",
+    "lender_members": ["Weserland Bank AG", "Volksbank Musterregion eG", "Sparkasse Musterstadt"],
+    "borrower": "Stadtwerke Musterstadt GmbH"
+  },
+  "amount_eur": "64000000.00",
+  "accounting_basis": {"standard": "HGB", "entity": "single", "frozen_methods_source_id": "S_GAAP"},
+  "has_financial_covenants": true,
+  "no_covenant_reason": null,
+  "sources": [
+    {"id": "S_TITEL", "page": 1, "section": "Vertragskopf",
+     "quote": "Konsortialkreditvertrag über einen Laufzeitkredit in Höhe von EUR 64.000.000,00 vom 30. November 2023"},
+    {"id": "S_AGENT", "page": 1, "section": "Parteien (4)",
+     "quote": "die Weserland Bank AG als Agent der Kreditgeber (der „Agent“)."},
+    {"id": "S_KREDITGEBER", "page": 11, "section": "Anlage 1 (Kreditgeber und Zusagen)",
+     "quote": "Weserland Bank AG, Am Wall 120, 28195 Weserstadt 25.600.000,00 40,0 % Volksbank Musterregion eG, Genossenschaftsring 8, 12340 19.200.000,00 30,0 % Musterregion Sparkasse Musterstadt, Marktplatz 1, 12345 Musterstadt 19.200.000,00 30,0 %"},
+    {"id": "S_BS", "page": 1, "section": "§ 1 Abs. 1 „Bilanzsumme“",
+     "quote": "„Bilanzsumme“ bezeichnet die Summe der Aktiva der Kreditnehmerin gemäß dem maßgeblichen Jahresabschluss."},
+    {"id": "S_DVG_DEF", "page": 2, "section": "§ 1 Abs. 1 „Dynamischer Verschuldungsgrad“",
+     "quote": "„Dynamischer Verschuldungsgrad“ bezeichnet für einen Prüfungszeitraum das Verhältnis der Nettofinanzverbindlichkeiten zum letzten Tag des Prüfungszeitraums zum EBITDA für diesen Prüfungszeitraum."},
+    {"id": "S_EBITDA", "page": 2, "section": "§ 1 Abs. 1 „EBITDA“",
+     "quote": "„EBITDA“ bezeichnet für einen Prüfungszeitraum den Jahresüberschuss bzw. Jahresfehlbetrag der Kreditnehmerin, (a) zuzüglich der Steuern vom Einkommen und vom Ertrag, (b) zuzüglich der Zinsen und ähnlichen Aufwendungen, (c) abzüglich der sonstigen Zinsen und ähnlichen Erträge, (d) zuzüglich der Abschreibungen auf immaterielle Vermögensgegenstände und Sachanlagen und (e) zuzüglich bzw. abzüglich außerordentlicher Aufwendungen bzw. Erträge im Sinne von § 285 Nr. 31 HGB, jeweils soweit sie bei der Ermittlung des Jahresüberschusses bzw. Jahresfehlbetrages berücksichtigt wurden. Erträge aus der Auflösung von Sonderposten werden nicht bereinigt."},
+    {"id": "S_EK", "page": 2, "section": "§ 1 Abs. 1 „Eigenkapital“",
+     "quote": "„Eigenkapital“ bezeichnet das bilanzielle Eigenkapital der Kreditnehmerin gemäß § 266 Absatz 3 Buchstabe A HGB laut maßgeblichem Jahresabschluss. Sonderposten (insbesondere für Investitions- und Baukostenzuschüsse), Rückstellungen und Gesellschafterdarlehen sind nicht Teil des Eigenkapitals, und zwar auch dann nicht, wenn für ein Gesellschafterdarlehen ein Rangrücktritt vereinbart ist."},
+    {"id": "S_EKQ", "page": 2, "section": "§ 1 Abs. 1 „Eigenkapitalquote“",
+     "quote": "„Eigenkapitalquote“ bezeichnet das Verhältnis des Eigenkapitals zur Bilanzsumme zum jeweiligen Prüfungsstichtag, ausgedrückt in Prozent."},
+    {"id": "S_FV", "page": 2, "section": "§ 1 Abs. 1 „Finanzverbindlichkeiten“",
+     "quote": "„Finanzverbindlichkeiten“ bezeichnet ohne Doppelzählung sämtliche Verbindlichkeiten der Kreditnehmerin aus (a) aufgenommenen Darlehen und Krediten, (b) Anleihen, Schuldverschreibungen, Schuldscheindarlehen und ähnlichen Instrumenten, (c) Finanzierungsleasingverträgen, soweit nach HGB als Verbindlichkeit bilanziert, (d) Verkäufen von Forderungen mit Rückgriff und (e) sonstigen Geschäften mit der wirtschaftlichen Wirkung einer Kreditaufnahme, jedoch jeweils mit Ausnahme von Nachrangigen Gesellschafterdarlehen."},
+    {"id": "S_LM", "page": 2, "section": "§ 1 Abs. 1 „Liquide Mittel“",
+     "quote": "„Liquide Mittel“ bezeichnet den Kassenbestand und die Guthaben der Kreditnehmerin bei Kreditinstituten, soweit diese frei verfügbar und nicht verpfändet oder anderweitig mit Rechten Dritter belastet sind."},
+    {"id": "S_MEHRHEIT", "page": 2, "section": "§ 1 Abs. 1 „Mehrheitskreditgeber“",
+     "quote": "„Mehrheitskreditgeber“ bezeichnet einen oder mehrere Kreditgeber, deren Anteil am ausstehenden Kredit zusammen mehr als 66⅔ % beträgt."},
+    {"id": "S_NGD", "page": 2, "section": "§ 1 Abs. 1 „Nachrangiges Gesellschafterdarlehen“",
+     "quote": "„Nachrangiges Gesellschafterdarlehen“ bezeichnet jedes Darlehen eines direkten oder indirekten Gesellschafters der Kreditnehmerin, für das ein qualifizierter Rangrücktritt im Sinne von § 39 Absatz 2 InsO gegenüber den Forderungen der Kreditgeber aus diesem Vertrag"},
+    {"id": "S_NGD_2", "page": 3, "section": "§ 1 Abs. 1 „Nachrangiges Gesellschafterdarlehen“ (Fortsetzung)",
+     "quote": "vereinbart ist und dessen Tilgung und Verzinsung nur aus freiem Vermögen bzw. Bilanzgewinn erfolgen darf."},
+    {"id": "S_NFV", "page": 3, "section": "§ 1 Abs. 1 „Nettofinanzverbindlichkeiten“",
+     "quote": "„Nettofinanzverbindlichkeiten“ bezeichnet zu einem Stichtag die Summe der Finanzverbindlichkeiten abzüglich der Liquiden Mittel."},
+    {"id": "S_PRUEF", "page": 3, "section": "§ 1 Abs. 1 „Prüfungsstichtag“",
+     "quote": "„Prüfungsstichtag“ bezeichnet jeweils den 31. Dezember eines Jahres, erstmals den 31. Dezember 2023;"},
+    {"id": "S_GAAP", "page": 3, "section": "§ 1 Abs. 2",
+     "quote": "Rechnungslegungsbegriffe sind nach den Grundsätzen ordnungsmäßiger Buchführung nach HGB auszulegen, die bei Aufstellung des Jahresabschlusses für das Geschäftsjahr 2022 angewandt wurden."},
+    {"id": "S_MARGE", "page": 4, "section": "§ 6 Abs. 3",
+     "quote": "Die Marge beträgt anfänglich 1,10 % p. a. Ab dem ersten Tag der Zinsperiode, die auf den Zugang einer Compliance-Bescheinigung beim Agent folgt, bestimmt sich die Marge nach dem in dieser Compliance-Bescheinigung ausgewiesenen Dynamischen Verschuldungsgrad wie folgt (Margenraster): Dynamischer Verschuldungsgrad Marge p. a. kleiner oder gleich 2,50 0,95 % größer als 2,50 und kleiner oder gleich 3,00 1,10 % größer als 3,00 1,25 %"},
+    {"id": "S_MARGE_4", "page": 4, "section": "§ 6 Abs. 4",
+     "quote": "Das Margenraster dient ausschließlich der Preisbestimmung. Die Einordnung in eine Stufe des Margenrasters begründet als solche keinen Kündigungsgrund; maßgeblich für die Einhaltung der Finanzkennzahlen ist allein § 14."},
+    {"id": "S_TILG", "page": 4, "section": "§ 7 Abs. 1",
+     "quote": "Die Kreditnehmerin hat den Kredit in jährlichen Raten von je EUR 3.000.000,00 zu tilgen, fällig jeweils am 30. November, erstmals am 30. November 2025."},
+    {"id": "S_TILGPLAN", "page": 11, "section": "Anlage 2 (Tilgungsplan)",
+     "quote": "30.11.2026 3.000.000,00 58.000.000,00 30.11.2027 3.000.000,00 55.000.000,00 30.11.2028 3.000.000,00 52.000.000,00"},
+    {"id": "S_PLAN", "page": 6, "section": "§ 13 Abs. 1 lit. c",
+     "quote": "innerhalb von 30 Tagen nach seiner Aufstellung, spätestens bis zum 31. Dezember für das Folgejahr, den Wirtschaftsplan (Erfolgsplan, Planbilanz, Finanzplan einschließlich Darlehensspiegel) einschließlich einer indikativen Berechnung der Finanzkennzahlen nach § 14 auf Planbasis;"},
+    {"id": "S_COV_A", "page": 6, "section": "§ 14 Abs. 1 lit. a",
+     "quote": "die Eigenkapitalquote zu jedem Prüfungsstichtag nicht weniger als 30,0 % beträgt; und"},
+    {"id": "S_COV_B", "page": 7, "section": "§ 14 Abs. 1 lit. b",
+     "quote": "der Dynamische Verschuldungsgrad für jeden Prüfungszeitraum nicht mehr als 3,50 beträgt."},
+    {"id": "S_TEST", "page": 7, "section": "§ 14 Abs. 2",
+     "quote": "Die Finanzkennzahlen werden auf Grundlage des maßgeblichen Jahresabschlusses und der Compliance-Bescheinigung ermittelt."},
+    {"id": "S_RUND", "page": 7, "section": "§ 14 Abs. 2",
+     "quote": "Die Eigenkapitalquote wird auf eine Nachkommastelle, der Dynamische Verschuldungsgrad auf zwei Nachkommastellen kaufmännisch gerundet."},
+    {"id": "S_PLANCHECK", "page": 7, "section": "§ 14 Abs. 3",
+     "quote": "Die indikative Berechnung auf Planbasis nach § 13 Absatz 1 lit. c) ist nach denselben Definitionen auf Grundlage der Planwerte (Planbilanz zum Ende des Planjahres und Erfolgsplan für das Planjahr) vorzunehmen. Sie dient der Frühwarnung; eine Abweichung von den Grenzwerten auf Planbasis begründet keinen Kündigungsgrund, verpflichtet die Kreditnehmerin jedoch, auf Verlangen der Mehrheitskreditgeber ein Gespräch über Gegenmaßnahmen zu führen."},
+    {"id": "S_CURE", "page": 7, "section": "§ 14 Abs. 4",
+     "quote": "Eine Heilung durch Eigenkapitalzuführung nach dem Prüfungsstichtag ist ausgeschlossen."},
+    {"id": "S_NEGATIV", "page": 7, "section": "§ 15 Abs. 1 lit. d",
+     "quote": "sonstiger Sicherheiten für Verbindlichkeiten von insgesamt höchstens EUR 5.000.000,00."},
+    {"id": "S_VERAEUSS", "page": 7, "section": "§ 15 Abs. 4",
+     "quote": "Die Kreditnehmerin wird keine Vermögenswerte veräußern, deren Buchwert in einem Geschäftsjahr insgesamt 7,5 % der Bilanzsumme gemäß dem letzten Jahresabschluss übersteigt"},
+    {"id": "S_KG", "page": 7, "section": "§ 16 Abs. 1 lit. b",
+     "quote": "Finanzkennzahlen: Eine der Verpflichtungen nach § 14 Absatz 1 wird nicht eingehalten."},
+    {"id": "S_DRITTV", "page": 8, "section": "§ 16 Abs. 1 lit. e",
+     "quote": "Drittverzug: Finanzverbindlichkeiten von insgesamt mehr als EUR 5.000.000,00 werden nicht bei Fälligkeit gezahlt oder wegen eines Kündigungsgrundes vorzeitig fällig gestellt."}
+  ],
+  "loans": [
+    {
+      "loan_id": "V4",
+      "match": {"loan_number": null, "label_patterns": ["Konsortialkredit", "Weserland"]},
+      "tranches": [],
+      "repayment_schedule": [
+        {"date": "2026-11-30", "amount_eur": "3000000.00"},
+        {"date": "2027-11-30", "amount_eur": "3000000.00"},
+        {"date": "2028-11-30", "amount_eur": "3000000.00"}
+      ],
+      "source_id": "S_TILGPLAN"
+    }
+  ],
+  "conditions": {
+    "subordinated_shareholder_loan": {
+      "label_de": "qualifizierter Rangrücktritt (Nachrangiges Gesellschafterdarlehen)",
+      "criteria": [
+        "qualifizierter Rangrücktritt im Sinne von § 39 Abs. 2 InsO gegenüber den Kreditgebern",
+        "Tilgung und Verzinsung nur aus freiem Vermögen bzw. Bilanzgewinn"
+      ],
+      "plan_fact": "qualified_subordination",
+      "source_id": "S_NGD",
+      "more_source_ids": ["S_NGD_2"]
+    },
+    "cash_freely_available": {
+      "label_de": "freie Verfügbarkeit der liquiden Mittel",
+      "criteria": ["frei verfügbar", "nicht verpfändet oder anderweitig mit Rechten Dritter belastet"],
+      "plan_fact": "cash_freely_available",
+      "source_id": "S_LM"
+    }
+  },
+  "definitions": {
+    "ebitda": {
+      "term": "EBITDA",
+      "components": [
+        {"item": "net_income", "weight": "1", "source_id": "S_EBITDA"},
+        {"item": "income_taxes", "weight": "1", "source_id": "S_EBITDA"},
+        {"item": "interest_expense", "weight": "1", "source_id": "S_EBITDA"},
+        {"item": "interest_income", "weight": "-1", "source_id": "S_EBITDA"},
+        {"item": "depreciation", "weight": "1", "source_id": "S_EBITDA"},
+        {"item": "extraordinary_items", "weight": "1", "if_missing": "assume_zero_info", "source_id": "S_EBITDA"}
+      ],
+      "clarifications": [
+        {"text": "Erträge aus der Auflösung von Sonderposten werden nicht bereinigt", "source_id": "S_EBITDA"}
+      ],
+      "source_id": "S_EBITDA"
+    },
+    "financial_debt": {
+      "term": "Finanzverbindlichkeiten",
+      "components": [
+        {"item": "bank_debt", "weight": "1", "source_id": "S_FV"},
+        {"item": "shareholder_loan", "weight": "1", "exclude_if": "subordinated_shareholder_loan", "source_id": "S_FV"},
+        {"item": "bonds", "weight": "1", "if_missing": "assume_zero_warn", "source_id": "S_FV"},
+        {"item": "finance_leases", "weight": "1", "if_missing": "assume_zero_warn", "source_id": "S_FV"},
+        {"item": "recourse_factoring", "weight": "1", "if_missing": "assume_zero_warn", "source_id": "S_FV"}
+      ],
+      "unmapped_components": [
+        {"text": "(e) sonstige Geschäfte mit der wirtschaftlichen Wirkung einer Kreditaufnahme",
+         "handling": "im Plan nicht gesondert ausweisbar; angenommen, dass keine solchen Geschäfte bestehen (0 T€)",
+         "effect": "assumption", "source_id": "S_FV"}
+      ],
+      "source_id": "S_FV"
+    },
+    "net_financial_debt": {
+      "term": "Nettofinanzverbindlichkeiten",
+      "components": [
+        {"ref": "financial_debt", "weight": "1", "source_id": "S_NFV"},
+        {"item": "cash", "weight": "-1", "only_if": "cash_freely_available", "source_id": "S_LM"}
+      ],
+      "source_id": "S_NFV"
+    },
+    "equity": {
+      "term": "Eigenkapital",
+      "components": [{"item": "equity", "weight": "1", "source_id": "S_EK"}],
+      "exclusions": [
+        {"text": "Sonderposten, Rückstellungen und Gesellschafterdarlehen, auch mit Rangrücktritt", "source_id": "S_EK"}
+      ],
+      "source_id": "S_EK"
+    },
+    "total_assets": {
+      "term": "Bilanzsumme",
+      "components": [{"item": "total_assets", "weight": "1", "source_id": "S_BS"}],
+      "source_id": "S_BS"
+    }
+  },
+  "covenants": [
+    {
+      "covenant_id": "V4-EKQ",
+      "metric_type": "equity_ratio",
+      "name_in_contract": "Eigenkapitalquote",
+      "numerator": [{"ref": "equity", "weight": "1", "source_id": "S_EKQ"}],
+      "denominator": [{"ref": "total_assets", "weight": "1", "source_id": "S_EKQ"}],
+      "operator": ">=",
+      "thresholds": [{"from_year": 2023, "value": "30.0"}],
+      "unit": "percent",
+      "rounding": {"decimals": 1, "method": "half_up", "source_id": "S_RUND"},
+      "test": {"frequency": "annual", "date": "12-31", "basis": "annual_accounts", "first_test": "2023-12-31", "source_id": "S_PRUEF"},
+      "plan_check": {
+        "applies": true,
+        "consequence": "early_warning_only",
+        "plan_basis": ["planbilanz", "erfolgsplan"],
+        "plan_status_required": null,
+        "deadline": "12-31",
+        "actions": [{"type": "talks_on_request", "by": "majority_lenders", "source_id": "S_PLANCHECK"}],
+        "source_id": "S_PLANCHECK",
+        "duty_source_id": "S_PLAN"
+      },
+      "breach_consequence": {"type": "event_of_default", "window_days": null, "source_id": "S_KG", "more_source_ids": []},
+      "cure": {"allowed": false, "source_id": "S_CURE"},
+      "source_id": "S_COV_A",
+      "unmapped_components": []
+    },
+    {
+      "covenant_id": "V4-DVG",
+      "metric_type": "net_debt_to_ebitda",
+      "name_in_contract": "Dynamischer Verschuldungsgrad",
+      "numerator": [{"ref": "net_financial_debt", "weight": "1", "source_id": "S_DVG_DEF"}],
+      "denominator": [{"ref": "ebitda", "weight": "1", "source_id": "S_DVG_DEF"}],
+      "operator": "<=",
+      "thresholds": [{"from_year": 2023, "value": "3.50"}],
+      "unit": "ratio",
+      "rounding": {"decimals": 2, "method": "half_up", "source_id": "S_RUND"},
+      "test": {"frequency": "annual", "date": "12-31", "basis": "annual_accounts", "first_test": "2023-12-31", "source_id": "S_PRUEF"},
+      "plan_check": {
+        "applies": true,
+        "consequence": "early_warning_only",
+        "plan_basis": ["planbilanz", "erfolgsplan"],
+        "plan_status_required": null,
+        "deadline": "12-31",
+        "actions": [{"type": "talks_on_request", "by": "majority_lenders", "source_id": "S_PLANCHECK"}],
+        "source_id": "S_PLANCHECK",
+        "duty_source_id": "S_PLAN"
+      },
+      "breach_consequence": {"type": "event_of_default", "window_days": null, "source_id": "S_KG", "more_source_ids": []},
+      "cure": {"allowed": false, "source_id": "S_CURE"},
+      "source_id": "S_COV_B",
+      "unmapped_components": []
+    }
+  ],
+  "pricing_grid": {
+    "metric_ref": "V4-DVG",
+    "is_covenant": false,
+    "initial_margin_pct": "1.10",
+    "effective_from": "erster Tag der Zinsperiode nach Zugang der Compliance-Bescheinigung",
+    "steps": [
+      {"upper": "2.50", "upper_inclusive": true, "margin_pct": "0.95"},
+      {"upper": "3.00", "upper_inclusive": true, "margin_pct": "1.10"},
+      {"upper": null, "upper_inclusive": true, "margin_pct": "1.25"}
+    ],
+    "source_id": "S_MARGE",
+    "more_source_ids": ["S_MARGE_4"]
+  },
+  "examples": [],
+  "dismissed_mentions": [
+    {"source_id": "S_MARGE", "category": "pricing",
+     "reason": "Margenraster dient ausschließlich der Preisbestimmung (§ 6 Abs. 4), kein Covenant."},
+    {"source_id": "S_VERAEUSS", "category": "general_undertaking",
+     "reason": "Veräußerungsgrenze 7,5 % der Bilanzsumme (§ 15 Abs. 4), allgemeine Verpflichtung."},
+    {"source_id": "S_NEGATIV", "category": "negative_pledge",
+     "reason": "Negativerklärung mit Freibetrag EUR 5 Mio. (§ 15 Abs. 1 lit. d), keine Finanzkennzahl."},
+    {"source_id": "S_DRITTV", "category": "cross_default",
+     "reason": "Drittverzug ab EUR 5 Mio. (§ 16 Abs. 1 lit. e), Kündigungsgrund, keine Finanzkennzahl."},
+    {"source_id": "S_MEHRHEIT", "category": "other",
+     "reason": "Mehrheitskreditgeber > 66⅔ % (Abstimmungsquorum), keine Finanzkennzahl."}
+  ],
+  "label_hints": {},
+  "review": {"status": "reviewed", "reviewed_by": "gold (hand-written)", "reviewed_at": "2026-11-07",
+             "notes": "Sparkasse Musterstadt ist Konsortialmitglied (Anlage 1) und zugleich Kreditgeberin von Vertrag 1; Zuordnung der Darlehenszeile über 'Konsortialkredit' / 'Weserland', nicht über 'Sparkasse'."},
+  "extraction": null
+}

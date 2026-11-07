@@ -4,7 +4,7 @@ from finn.numbers import format_de
 from finn.plan.reader import PlanReadResult
 
 
-def _table(headers: list[str], rows: list[list[str]], max_width: int = 60) -> list[str]:
+def text_table(headers: list[str], rows: list[list[str]], max_width: int = 60) -> list[str]:
     cells = [[c if len(c) <= max_width else c[: max_width - 1] + "…" for c in r] for r in rows]
     widths = [max(len(h), *(len(r[i]) for r in cells)) for i, h in enumerate(headers)]
     line = "  ".join(h.ljust(w) for h, w in zip(headers, widths, strict=True))
@@ -36,7 +36,7 @@ def render_text(result: PlanReadResult) -> str:
             ]
             for item, pv in plan.values.items()
         ]
-        lines += _table(["Baustein", "Wert", "Zelle", "Bezeichnung"], rows)
+        lines += text_table(["Baustein", "Wert", "Zelle", "Bezeichnung"], rows)
         lines += ["", "Darlehen (T€)"]
         loan_rows = [
             [ln.label, ln.loan_number or "-", ln.kind, *(format_de(v, 0) for v in (
@@ -45,17 +45,17 @@ def render_text(result: PlanReadResult) -> str:
             for ln in plan.loans
         ]  # fmt: skip
         headers = ["Darlehen", "Nr.", "Art", "Anfang", "Ausz.", "Tilg.", "Sondertilg.", "Ende"]
-        lines += _table([*headers, "Zins"], loan_rows, max_width=40)
+        lines += text_table([*headers, "Zins"], loan_rows, max_width=40)
         lines += ["", "Fakten"]
         fact_rows = [
             [key.value, str(f.value), str(f.evidence or "-"), "ja" if f.ambiguous else "nein"]
             for key, f in plan.facts.items()
         ]
-        lines += _table(["Fakt", "Wert", "Beleg", "unklar"], fact_rows)
+        lines += text_table(["Fakt", "Wert", "Beleg", "unklar"], fact_rows)
     lines += ["", "Befunde"]
     if result.findings:
         finding_rows = [[f.severity, f.code, f.message_de] for f in result.findings]
-        lines += _table(["Stufe", "Code", "Meldung"], finding_rows, max_width=120)
+        lines += text_table(["Stufe", "Code", "Meldung"], finding_rows, max_width=120)
     else:
         lines.append("(keine)")
     return "\n".join(lines)
