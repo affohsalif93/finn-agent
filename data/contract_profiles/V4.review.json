@@ -1,0 +1,20 @@
+{
+  "contract_id": "V4",
+  "prompt_version": "v1-4a11ceeb",
+  "created_at": "2026-11-07T17:40:23+00:00",
+  "profile_extraction": {
+    "model": "gpt-6.1-sol",
+    "prompt_version": "v1-4a11ceeb",
+    "extracted_at": "2026-11-07T17:39:15+00:00",
+    "source_sha256": "9bdd1f862165681bf44bcd5ece1d765dddf644f6a6415da1644d97ea1d0b1a4d"
+  },
+  "llm_review": {
+    "issues": [],
+    "summary": "Der Entwurf bildet beide Finanzkennzahlen einschließlich Berechnungsdefinitionen, Ausschlüssen, Grenzwerten, Rundung, Prüfstichtagen und Rechtsfolgen korrekt ab. Auch Planprüfung, Heilungsausschluss, Margenraster und die relevanten nicht als Covenants einzuordnenden Passagen sind zutreffend erfasst."
+  },
+  "validation": [
+    "Zitate: 45/45 wörtlich auf der angegebenen Seite"
+  ],
+  "quote_fixes": [],
+  "completeness_uncovered": []
+}

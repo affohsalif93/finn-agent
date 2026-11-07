@@ -1,0 +1,297 @@
+{
+  "contract_id": "V1",
+  "schema_version": 2,
+  "name_de": "Sparkasse",
+  "document": {
+    "file": "Vertrag_1_Sparkasse_Investitionsdarlehen.pdf",
+    "sha256": "06ccae3fa0955108c43e523cf74ed488ef20a2482102a2a53479942a75138284",
+    "pages": 13,
+    "date": "2021-03-15"
+  },
+  "parties": {
+    "lender": "Sparkasse Musterstadt",
+    "lender_members": [],
+    "borrower": "Stadtwerke Musterstadt GmbH"
+  },
+  "amount_eur": "25000000.00",
+  "accounting_basis": {
+    "standard": "HGB",
+    "entity": "single",
+    "frozen_methods_source_id": "S_GOB"
+  },
+  "has_financial_covenants": false,
+  "no_covenant_reason": {
+    "text": "Der Vertrag enthält keine verbindlichen finanziellen Mindest- oder Höchstkennzahlen. Die Eigenkapitalquote von 28,4 % und der dynamische Verschuldungsgrad von 2,9 beschreiben ausschließlich die historische Situation zum 31. Dezember 2019. Die Informationspflichten und allgemeinen Kündigungsrechte begründen keine laufenden finanziellen Kennzahlentests.",
+    "source_id": "S_HIST"
+  },
+  "sources": [
+    {
+      "id": "S_HEADER",
+      "page": 1,
+      "section": "Vertragskopf",
+      "quote": "Darlehensvertrag Investitionsdarlehen Nr. 4471 203 118 über EUR 25.000.000,00 zwischen der Sparkasse Musterstadt, Anstalt des öffentlichen Rechts, Marktplatz 1, 12345 Musterstadt, vertreten durch den Vorstand, – nachfolgend „Sparkasse“ – und der Stadtwerke Musterstadt GmbH, Hafenstraße 20, 12345 Musterstadt, eingetragen im Handelsregister des Amtsgerichts Musterstadt unter HRB 4711, vertreten durch ihre Geschäftsführung, – nachfolgend „Kreditnehmerin“ –"
+    },
+    {
+      "id": "S_DATE",
+      "page": 9,
+      "section": "Unterzeichnungsdatum",
+      "quote": "Musterstadt, den 15. März 2021"
+    },
+    {
+      "id": "S_HIST",
+      "page": 1,
+      "section": "Präambel",
+      "quote": "Zum 31. Dezember 2019 wies die Kreditnehmerin eine bilanzielle Eigenkapitalquote von 28,4 % und einen dynamischen Verschuldungsgrad (Nettofinanzverbindlichkeiten zu EBITDA) von 2,9 aus."
+    },
+    {
+      "id": "S_GOB",
+      "page": 5,
+      "section": "§ 11 Abs. 1 lit. d",
+      "quote": "Der zuletzt vorgelegte Jahresabschluss ist nach den Grundsätzen ordnungsmäßiger Buchführung aufgestellt und vermittelt ein den tatsächlichen Verhältnissen entsprechendes Bild der Vermögens-, Finanz- und Ertragslage."
+    },
+    {
+      "id": "S_REPAY",
+      "page": 3,
+      "section": "§ 7 Abs. 1",
+      "quote": "Das Darlehen ist nach zwei tilgungsfreien Jahren in zwanzig gleichen jährlichen Raten zu je EUR 1.250.000,00 zu tilgen. Die Tilgungsraten sind jeweils am 30. Dezember eines Jahres fällig, erstmals am 30. Dezember 2023 und letztmals am 30. Dezember 2042."
+    },
+    {
+      "id": "S_PLAN_DUTY",
+      "page": 6,
+      "section": "§ 12 Abs. 1 lit. b",
+      "quote": "den vom Aufsichtsrat beschlossenen Wirtschaftsplan (Erfolgsplan, Vermögensplan, Finanzplan und Stellenübersicht) für das jeweils folgende Geschäftsjahr innerhalb eines Monats nach Beschlussfassung, spätestens bis zum 31. Januar des jeweiligen Geschäftsjahres;"
+    },
+    {
+      "id": "S_PAYOUT",
+      "page": 2,
+      "section": "§ 2 Abs. 2",
+      "quote": "Das Darlehen wird zu 100 % ausgezahlt; ein Disagio wird nicht erhoben."
+    },
+    {
+      "id": "S_DRAW",
+      "page": 3,
+      "section": "§ 5 Abs. 1",
+      "quote": "Das Darlehen kann in Teilbeträgen von mindestens EUR 1.000.000,00 abgerufen werden."
+    },
+    {
+      "id": "S_COMMISSION",
+      "page": 3,
+      "section": "§ 5 Abs. 3",
+      "quote": "Für nicht abgerufene Darlehensbeträge berechnet die Sparkasse ab dem 1. Juli 2021 eine Bereitstellungsprovision von 0,25 % p. a., die vierteljährlich nachträglich zu den Zinszahlungstagen fällig ist."
+    },
+    {
+      "id": "S_INTEREST",
+      "page": 3,
+      "section": "§ 6 Abs. 1",
+      "quote": "Das Darlehen ist bis zum Zinsbindungsende mit einem festen Sollzinssatz von 2,80 % p. a. zu verzinsen."
+    },
+    {
+      "id": "S_VARIABLE",
+      "page": 3,
+      "section": "§ 6 Abs. 3",
+      "quote": "Kommt bis zum Zinsbindungsende keine Vereinbarung zustande, wird das Darlehen zu einem variablen Zinssatz (3-Monats-EURIBOR zuzüglich einer Marge von 1,10 % p. a.) weitergeführt; die Kreditnehmerin kann das Darlehen in diesem Fall jederzeit mit einer Frist von drei Monaten ganz oder teilweise zurückzahlen."
+    },
+    {
+      "id": "S_SPECIAL",
+      "page": 4,
+      "section": "§ 8 Abs. 2",
+      "quote": "Abweichend von Absatz 1 ist die Kreditnehmerin berechtigt, einmal je Kalenderjahr, erstmals im Jahr 2026, eine Sondertilgung von bis zu EUR 1.000.000,00 ohne Vorfälligkeitsentschädigung zu leisten."
+    },
+    {
+      "id": "S_GUARANTEE",
+      "page": 4,
+      "section": "§ 10 Abs. 1",
+      "quote": "Zur Sicherung aller Ansprüche der Sparkasse aus diesem Vertrag übernimmt die Stadt Musterstadt eine selbstschuldnerische Ausfallbürgschaft in Höhe von 80 % des jeweils ausstehenden Darlehensbetrages zuzüglich Zinsen und Kosten."
+    },
+    {
+      "id": "S_COLLATERAL",
+      "page": 5,
+      "section": "§ 10 Abs. 4",
+      "quote": "Im Übrigen gilt Nr. 22 der AGB-Sparkassen (Bestellung oder Verstärkung von Sicherheiten). Die Sparkasse kann eine Verstärkung von Sicherheiten verlangen, wenn sich die wirtschaftlichen Verhältnisse der Kreditnehmerin oder der Wert der Sicherheiten nachteilig verändert haben oder zu verändern drohen."
+    },
+    {
+      "id": "S_NEGATIVE",
+      "page": 6,
+      "section": "§ 14 Abs. 1",
+      "quote": "Negativerklärung. Die Kreditnehmerin wird während der Laufzeit dieses Vertrages ohne vorherige Zustimmung der Sparkasse ihr gegenwärtiges oder künftiges Vermögen weder ganz noch teilweise mit Grundpfandrechten, Pfandrechten oder sonstigen Sicherungsrechten zugunsten Dritter belasten oder belasten lassen."
+    },
+    {
+      "id": "S_DISPOSAL",
+      "page": 7,
+      "section": "§ 14 Abs. 3",
+      "quote": "Als wesentlich gelten Veräußerungen, deren Buchwert im Geschäftsjahr insgesamt 10 % des Anlagevermögens gemäß dem zuletzt festgestellten Jahresabschluss übersteigt."
+    },
+    {
+      "id": "S_CONTROL",
+      "page": 7,
+      "section": "§ 14 Abs. 4",
+      "quote": "Gesellschafterstruktur. Die Kreditnehmerin wird die Sparkasse unverzüglich unterrichten, wenn die Stadt Musterstadt unmittelbar oder mittelbar nicht mehr mehr als 50 % der Geschäftsanteile oder der Stimmrechte an der Kreditnehmerin hält."
+    },
+    {
+      "id": "S_COLLATERAL_TERM",
+      "page": 7,
+      "section": "§ 15 Abs. 1 lit. e",
+      "quote": "eine wesentliche Verschlechterung der Vermögensverhältnisse der Kreditnehmerin oder des Wertes der Sicherheiten eintritt oder einzutreten droht, durch die die Rückzahlung des Darlehens gefährdet wird, und die Kreditnehmerin einer Aufforderung zur Bestellung oder Verstärkung von Sicherheiten nicht innerhalb angemessener Frist nachkommt;"
+    },
+    {
+      "id": "S_CROSS",
+      "page": 7,
+      "section": "§ 15 Abs. 1 lit. g",
+      "quote": "andere Finanzverbindlichkeiten der Kreditnehmerin in Höhe von insgesamt mehr als EUR 2.500.000,00 wegen eines Kündigungsgrundes vorzeitig fällig gestellt werden (Drittverzug)."
+    },
+    {
+      "id": "S_ANNEX_GUARANTEE",
+      "page": 12,
+      "section": "Anlage 2, Einleitung",
+      "quote": "Die Stadt Musterstadt, vertreten durch den Oberbürgermeister, übernimmt hiermit gegenüber der Sparkasse Musterstadt für alle Ansprüche aus dem Darlehensvertrag Nr. 4471 203 118 vom 15. März 2021 zwischen der Sparkasse Musterstadt und der Stadtwerke Musterstadt GmbH die Ausfallbürgschaft bis zur Höhe von 80 % des jeweils ausstehenden Darlehensbetrages zuzüglich Zinsen und Kosten."
+    },
+    {
+      "id": "S_AVAL",
+      "page": 12,
+      "section": "Anlage 2 Nr. 3",
+      "quote": "Für die Bürgschaft entrichtet die Hauptschuldnerin an die Stadt ein marktübliches Avalentgelt von 0,50 % p. a. auf den verbürgten Betrag."
+    },
+    {
+      "id": "S_ANNEX_RATE",
+      "page": 11,
+      "section": "Anlage 1, Kopf",
+      "quote": "Darlehen Nr. 4471 203 118 · Darlehensbetrag EUR 25.000.000,00 · Sollzinssatz 2,80 % p. a. fest bis 30.03.2031 · Beträge in EUR."
+    }
+  ],
+  "loans": [
+    {
+      "loan_id": "V1",
+      "match": {
+        "loan_number": "4471 203 118",
+        "label_patterns": [
+          "Sparkasse Musterstadt",
+          "4471 203 118"
+        ]
+      },
+      "tranches": [],
+      "repayment_schedule": [
+        {
+          "date": "2026-12-30",
+          "amount_eur": "1250000.00",
+          "tranche": null
+        },
+        {
+          "date": "2027-12-30",
+          "amount_eur": "1250000.00",
+          "tranche": null
+        },
+        {
+          "date": "2028-12-30",
+          "amount_eur": "1250000.00",
+          "tranche": null
+        }
+      ],
+      "source_id": "S_REPAY"
+    }
+  ],
+  "conditions": {},
+  "definitions": {},
+  "covenants": [],
+  "pricing_grid": null,
+  "examples": [],
+  "dismissed_mentions": [
+    {
+      "source_id": "S_HIST",
+      "category": "historical_figure",
+      "reason": "Eigenkapitalquote und dynamischer Verschuldungsgrad sind historische Angaben zum 31. Dezember 2019, keine einzuhaltenden Grenzwerte."
+    },
+    {
+      "source_id": "S_PAYOUT",
+      "category": "other",
+      "reason": "Die Quote von 100 % beschreibt den Auszahlungskurs, keine finanzielle Kennzahlenverpflichtung."
+    },
+    {
+      "source_id": "S_DRAW",
+      "category": "other",
+      "reason": "Mindestbetrag eines Darlehensabrufs, kein finanzieller Mindestbestand oder Kennzahlentest."
+    },
+    {
+      "source_id": "S_COMMISSION",
+      "category": "pricing",
+      "reason": "Bereitstellungsprovision ohne Bezug zu einer Finanzkennzahl."
+    },
+    {
+      "source_id": "S_INTEREST",
+      "category": "pricing",
+      "reason": "Fester Sollzinssatz, kein Financial Covenant."
+    },
+    {
+      "source_id": "S_VARIABLE",
+      "category": "pricing",
+      "reason": "Anschlussverzinsung mit fester Marge, keine kennzahlenabhängige Margenstaffel."
+    },
+    {
+      "source_id": "S_SPECIAL",
+      "category": "other",
+      "reason": "Betragsmäßig begrenztes freiwilliges Sondertilgungsrecht, keine finanzielle Kennzahlenverpflichtung."
+    },
+    {
+      "source_id": "S_GUARANTEE",
+      "category": "other",
+      "reason": "Die Quote von 80 % bestimmt den Umfang der kommunalen Bürgschaft, keinen Financial Covenant."
+    },
+    {
+      "source_id": "S_COLLATERAL",
+      "category": "collateral_right",
+      "reason": "Allgemeines Recht auf Verstärkung von Sicherheiten ohne numerischen Kennzahlentest."
+    },
+    {
+      "source_id": "S_NEGATIVE",
+      "category": "negative_pledge",
+      "reason": "Negativerklärung zur Bestellung von Sicherungsrechten, keine finanzielle Kennzahl."
+    },
+    {
+      "source_id": "S_DISPOSAL",
+      "category": "general_undertaking",
+      "reason": "Die Grenze von 10 % definiert zustimmungspflichtige Vermögensveräußerungen, keine laufend einzuhaltende Finanzkennzahl."
+    },
+    {
+      "source_id": "S_CONTROL",
+      "category": "general_undertaking",
+      "reason": "Die Beteiligungsschwelle von 50 % löst eine Informationspflicht zur Gesellschafterstruktur aus."
+    },
+    {
+      "source_id": "S_COLLATERAL_TERM",
+      "category": "collateral_right",
+      "reason": "Kündigung bei wirtschaftlicher Verschlechterung und nicht erfülltem Sicherheitenverlangen; kein numerischer Financial Covenant."
+    },
+    {
+      "source_id": "S_CROSS",
+      "category": "cross_default",
+      "reason": "Drittverzugsschwelle für vorzeitig fällig gestellte andere Finanzverbindlichkeiten, keine Verschuldungsobergrenze."
+    },
+    {
+      "source_id": "S_ANNEX_GUARANTEE",
+      "category": "other",
+      "reason": "Wiederholung des Bürgschaftsumfangs von 80 % in der Bürgschaftsurkunde, kein Kennzahlentest."
+    },
+    {
+      "source_id": "S_AVAL",
+      "category": "pricing",
+      "reason": "Avalentgelt für die kommunale Bürgschaft, keine finanzielle Kennzahlenverpflichtung."
+    },
+    {
+      "source_id": "S_ANNEX_RATE",
+      "category": "pricing",
+      "reason": "Wiederholung des festen Sollzinssatzes im Tilgungsplan; keine kennzahlenabhängige Preisregelung."
+    }
+  ],
+  "label_hints": {},
+  "review": {
+    "status": "reviewed",
+    "reviewed_by": "Salifou Affoh (approved on eval 95/95, no line-by-line review)",
+    "reviewed_at": "2026-11-07",
+    "notes": "Vertragsbezeichnung, Parteien, Darlehensnummer und Betrag: S_HEADER. Vertragsdatum: S_DATE.\nRechnungslegung als Einzelabschluss der Kreditnehmerin eingeordnet. S_GOB nennt GoB als Abschlussgrundlage, fixiert jedoch keine Methoden eines Referenzjahres.\nS_PLAN_DUTY verlangt einen vom Aufsichtsrat beschlossenen Wirtschaftsplan innerhalb eines Monats nach Beschlussfassung, spätestens bis zum 31. Januar des jeweiligen Geschäftsjahres. Die Frist liegt ausdrücklich nicht im Vorjahr. Eine planbasierte Covenant-Prüfung oder besondere Rechtsfolge einer geplanten Kennzahlenunterschreitung ist nicht vereinbart."
+  },
+  "extraction": {
+    "model": "gpt-6.1-sol",
+    "prompt_version": "v1-4a11ceeb",
+    "extracted_at": "2026-11-07T17:36:38+00:00",
+    "source_sha256": "06ccae3fa0955108c43e523cf74ed488ef20a2482102a2a53479942a75138284"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "contract_id": "V2",
+  "prompt_version": "v1-4a11ceeb",
+  "created_at": "2026-11-07T17:37:58+00:00",
+  "profile_extraction": {
+    "model": "gpt-6.1-sol",
+    "prompt_version": "v1-4a11ceeb",
+    "extracted_at": "2026-11-07T17:37:11+00:00",
+    "source_sha256": "7488d4c0bf422983f2081fc8fd8d6c7b5b1e8c7a03bea090c3bc701b5717c9d4"
+  },
+  "llm_review": {
+    "issues": [],
+    "summary": "The draft correctly captures the sole financial covenant, its calculation and exclusions, the annual threshold and test date, and the plan-check requirements. The cited breach provisions and dismissed mentions are consistent with the contract; no material errors or omissions were identified."
+  },
+  "validation": [
+    "Zitate: 31/31 wörtlich auf der angegebenen Seite"
+  ],
+  "quote_fixes": [],
+  "completeness_uncovered": []
+}

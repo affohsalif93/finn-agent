@@ -1,0 +1,20 @@
+{
+  "contract_id": "V1",
+  "prompt_version": "v1-4a11ceeb",
+  "created_at": "2026-11-07T17:37:11+00:00",
+  "profile_extraction": {
+    "model": "gpt-6.1-sol",
+    "prompt_version": "v1-4a11ceeb",
+    "extracted_at": "2026-11-07T17:36:38+00:00",
+    "source_sha256": "06ccae3fa0955108c43e523cf74ed488ef20a2482102a2a53479942a75138284"
+  },
+  "llm_review": {
+    "issues": [],
+    "summary": "Der Entwurf erkennt zutreffend, dass der Vertrag keine verbindlichen finanziellen Covenants enthält. Die historischen Kennzahlen sowie die potenziell verwechselbaren Schwellenwerte, Sicherheitenrechte und Preisregelungen sind als dismissed_mentions erfasst."
+  },
+  "validation": [
+    "Zitate: 22/22 wörtlich auf der angegebenen Seite"
+  ],
+  "quote_fixes": [],
+  "completeness_uncovered": []
+}

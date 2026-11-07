@@ -1,0 +1,39 @@
+{
+  "contract_id": "V3",
+  "prompt_version": "v1-4a11ceeb",
+  "created_at": "2026-11-07T17:39:15+00:00",
+  "profile_extraction": {
+    "model": "gpt-6.1-sol",
+    "prompt_version": "v1-4a11ceeb",
+    "extracted_at": "2026-11-07T17:37:58+00:00",
+    "source_sha256": "3c4e5da78bca7ca8e35694e05ffcaef2a822de871aa4d34e4ac6f7cfa262abf9"
+  },
+  "llm_review": {
+    "issues": [
+      {
+        "kind": "wrong_value",
+        "severity": "medium",
+        "covenant_id": "V3-DSCR",
+        "page": 5,
+        "quote": "und zwar auch dann, wenn er vom Aufsichtsrat noch nicht beschlossen ist (Entwurfsfassung)",
+        "description": "plan_check.plan_status_required bleibt null. Damit ist nicht ausdrücklich erfasst, dass bereits eine Entwurfsfassung einzureichen ist und ein fehlender Aufsichtsratsbeschluss die Vorlagepflicht nicht aufschiebt.",
+        "suggested_fix": "Den Planstatus ausdrücklich als „Entwurfsfassung ausreichend und auch ohne Aufsichtsratsbeschluss fristgerecht vorzulegen“ erfassen; die Frist 15. Dezember beibehalten."
+      },
+      {
+        "kind": "wrong_value",
+        "severity": "medium",
+        "covenant_id": "V3-DSCR",
+        "page": 13,
+        "quote": "die Planwerte des Wirtschaftsplans (Erfolgsplan und Finanzplan bzw. Darlehensspiegel)",
+        "description": "plan_check.plan_basis nennt nur Erfolgsplan und Darlehensspiegel. Der Vertrag lässt für die Finanzierungsdaten auch den Finanzplan zu; ein Darlehensspiegel ist daher nicht zwingend zusätzlich zum Erfolgsplan erforderlich.",
+        "suggested_fix": "Die Planbasis als Erfolgsplan zusammen mit Finanzplan beziehungsweise Darlehensspiegel abbilden und die Alternative ausdrücklich festhalten."
+      }
+    ],
+    "summary": "Der DSCR einschließlich Berechnungsrezept, Schwellenwert, Rundung, Kündigungsfolge und Heilungsgrenzen ist zutreffend erfasst. Bei der Planprüfung fehlen die ausdrückliche Behandlung der Entwurfsfassung und der Finanzplan als zulässige Alternative zum Darlehensspiegel."
+  },
+  "validation": [
+    "Zitate: 36/36 wörtlich auf der angegebenen Seite"
+  ],
+  "quote_fixes": [],
+  "completeness_uncovered": []
+}
