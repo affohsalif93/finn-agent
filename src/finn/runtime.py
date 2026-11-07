@@ -6,6 +6,7 @@ import signal
 
 import structlog
 from temporalio.client import Client
+from temporalio.contrib.pydantic import pydantic_data_converter
 from temporalio.envconfig import ClientConfig
 from temporalio.service import RPCError
 
@@ -38,7 +39,8 @@ async def connect(settings: Settings, stop: asyncio.Event | None = None) -> Clie
     delay = 1.0
     while not stop.is_set():
         try:
-            client = await Client.connect(**config)
+            # Pydantic models as payloads (Decimals as strings, §7.2)
+            client = await Client.connect(**config, data_converter=pydantic_data_converter)
         except (RuntimeError, RPCError) as exc:  # connect failures surface as RuntimeError
             log.warning(
                 "temporal not reachable, retrying",

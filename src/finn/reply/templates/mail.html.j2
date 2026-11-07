@@ -1,0 +1,108 @@
+{#- HTML part: inline CSS only, simple tables (Outlook-safe), no JavaScript, no images. -#}
+{% set font = "font-family:Calibri,Arial,Helvetica,sans-serif;" %}
+{% set mono = "font-family:Consolas,'Courier New',monospace;font-size:13px;" %}
+{% set h2 = font ~ "font-size:15px;font-weight:bold;color:#1B2430;margin:22px 0 6px 0;" %}
+{% set p = font ~ "font-size:14px;line-height:1.45;color:#1B2430;margin:0 0 8px 0;" %}
+{% set colors = {"met": "#2E7D4F", "tight": "#8A4B00", "breached": "#B3261E", "open": "#46505E"} %}
+<!DOCTYPE html>
+<html lang="de">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head>
+<body style="margin:0;padding:0;background:#FFFFFF;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:780px;">
+<tr><td style="padding:16px 20px;">
+<p style="{{ p }}">{{ salutation }}</p>
+<p style="{{ p }}">{{ intro }}</p>
+{% if items %}
+<ul style="{{ p }}padding-left:20px;">
+{% for item in items %}
+<li style="margin:0 0 4px 0;">{{ item }}</li>
+{% endfor %}
+</ul>
+{% endif %}
+{% if checked %}
+<p style="{{ h2 }}">Geprüfte Eingabe</p>
+<p style="{{ p }}">{% for line in checked %}{{ line }}{% if not loop.last %}<br>{% endif %}{% endfor %}</p>
+{% if input_status %}
+<p style="{{ p }}">{{ input_status }}</p>
+{% endif %}
+{% endif %}
+{% if warnings %}
+<table role="presentation" width="100%" cellpadding="8" cellspacing="0" border="0" style="background:#FFF4D6;border-left:3px solid #8A4B00;margin:0 0 8px 0;">
+<tr><td style="{{ font }}font-size:14px;color:#1B2430;"><b>Achtung</b><br>
+{% for w in warnings %}{{ w }}{% if not loop.last %}<br>{% endif %}{% endfor %}
+</td></tr></table>
+{% endif %}
+{% if infos %}
+<p style="{{ p }}color:#46505E;"><b>Hinweise zur Eingabe:</b><br>
+{% for i in infos %}{{ i }}{% if not loop.last %}<br>{% endif %}{% endfor %}</p>
+{% endif %}
+{% if summary %}
+<p style="{{ h2 }}">Ergebnis</p>
+{% for s in summary %}
+<p style="{{ p }}">{{ s }}</p>
+{% endfor %}
+{% if early_warning %}
+<p style="{{ p }}color:#46505E;"><i>{{ early_warning }}</i></p>
+{% endif %}
+{% endif %}
+{% if rows %}
+<table cellpadding="6" cellspacing="0" border="1" style="border-collapse:collapse;border-color:#DEE2E7;{{ font }}font-size:13px;color:#1B2430;margin:10px 0 4px 0;">
+<tr style="background:#F4F5F7;">
+{% for h in table_headers %}
+<th align="left" style="border:1px solid #DEE2E7;">{{ h }}</th>
+{% endfor %}
+</tr>
+{% for r in rows %}
+<tr>
+<td style="border:1px solid #DEE2E7;">{{ r.contract }}</td>
+<td style="border:1px solid #DEE2E7;">{{ r.covenant }}</td>
+<td align="right" style="border:1px solid #DEE2E7;white-space:nowrap;"><b>{{ r.value }}</b></td>
+<td align="right" style="border:1px solid #DEE2E7;white-space:nowrap;">{{ r.threshold }}</td>
+<td align="right" style="border:1px solid #DEE2E7;white-space:nowrap;">{{ r.headroom }}</td>
+<td style="border:1px solid #DEE2E7;color:{{ colors[r.status] }};white-space:nowrap;"><b>{{ r.met }}</b></td>
+</tr>
+{% endfor %}
+</table>
+{% endif %}
+{% if paths %}
+<p style="{{ h2 }}">Rechenweg</p>
+{% for b in paths %}
+<p style="{{ p }}margin-top:14px;"><b>{{ b.title }}</b> – {{ b.status }}</p>
+{% if b.source %}
+<p style="{{ p }}font-size:13px;color:#46505E;">Vertrag: {{ b.source }}</p>
+{% endif %}
+{% if b.more_sources %}
+<p style="{{ p }}font-size:13px;color:#46505E;">{{ b.more_sources }}</p>
+{% endif %}
+{% if b.formula %}
+<p style="{{ mono }}margin:0 0 4px 0;color:#1B2430;"><b>{{ b.formula }}</b></p>
+{% endif %}
+{% for s in b.sub_formulas %}
+<p style="{{ mono }}margin:0 0 4px 0;color:#1B2430;">{{ s }}</p>
+{% endfor %}
+{% for l in b.lines %}
+<p style="{{ mono }}margin:0 0 0 {{ 18 * l.level }}px;color:{{ '#7F8894' if l.muted else '#1B2430' }};">{{ l.text }}</p>
+{% endfor %}
+{% for n in b.notes %}
+<p style="{{ p }}font-size:13px;margin:4px 0 0 0;color:#46505E;">{{ n }}</p>
+{% endfor %}
+{% endfor %}
+{% endif %}
+{% if notes %}
+<p style="{{ h2 }}">Hinweise</p>
+<ul style="{{ p }}padding-left:20px;">
+{% for n in notes %}
+<li style="margin:0 0 4px 0;">{{ n }}</li>
+{% endfor %}
+</ul>
+{% endif %}
+{% for c in closing %}
+<p style="{{ p }}">{{ c }}</p>
+{% endfor %}
+<p style="{{ p }}margin-top:16px;">Mit freundlichen Grüßen<br>Finn</p>
+<p style="{{ font }}font-size:12px;color:#7F8894;margin:18px 0 0 0;border-top:1px solid #DEE2E7;padding-top:8px;">
+{% for f in footer %}{{ f }}{% if not loop.last %}<br>{% endif %}{% endfor %}</p>
+</td></tr>
+</table>
+</body>
+</html>

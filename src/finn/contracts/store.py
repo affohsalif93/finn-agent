@@ -22,10 +22,13 @@ def sha256_file(path: Path) -> str:
 def load_profiles(
     profiles_dir: Path, contracts_dir: Path | None = None
 ) -> tuple[list[ContractProfile], list[Finding]]:
-    """All `*.json` profiles in `profiles_dir` (sorted by contract id) + findings."""
+    """All `*.json` profiles in `profiles_dir` (sorted by contract id) + findings.
+
+    `<id>.review.json` (the onboarding review next to a profile) is not a profile and skipped.
+    """
     profiles: list[ContractProfile] = []
     findings: list[Finding] = []
-    for path in sorted(profiles_dir.glob("*.json")):
+    for path in profile_paths(profiles_dir):
         profile, problems = load_profile(path)
         findings += problems
         if profile is None:
@@ -46,6 +49,13 @@ def load_profiles(
         ]
     profiles.sort(key=lambda p: p.contract_id)
     return profiles, findings
+
+
+REVIEW_SUFFIX = ".review.json"
+
+
+def profile_paths(profiles_dir: Path) -> list[Path]:
+    return sorted(p for p in profiles_dir.glob("*.json") if not p.name.endswith(REVIEW_SUFFIX))
 
 
 def load_profile(path: Path) -> tuple[ContractProfile | None, list[Finding]]:

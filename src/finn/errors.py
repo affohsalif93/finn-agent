@@ -23,7 +23,29 @@ class Severity(StrEnum):
 
 
 class ErrorCode(StrEnum):
+    # A. Gate (poller; logged as security events, never in a reply)
+    GATE_SENDER_REJECTED = "GATE_SENDER_REJECTED"
+    GATE_AUTH_FAILED = "GATE_AUTH_FAILED"
+    GATE_LOOP = "GATE_LOOP"
+    GATE_NOT_ADDRESSED = "GATE_NOT_ADDRESSED"
+    GATE_DUPLICATE = "GATE_DUPLICATE"
+    MAIL_TOO_LARGE = "MAIL_TOO_LARGE"
+    # B. Parse
+    MAIL_UNPARSEABLE = "MAIL_UNPARSEABLE"
+    ATTACHMENT_TNEF = "ATTACHMENT_TNEF"
+    ATTACHMENT_ARCHIVE = "ATTACHMENT_ARCHIVE"
+    ATTACHMENT_LINK_ONLY = "ATTACHMENT_LINK_ONLY"
+    # C. Intent
+    INTENT_LLM_UNAVAILABLE = "INTENT_LLM_UNAVAILABLE"
+    INTENT_AMBIGUOUS = "INTENT_AMBIGUOUS"
+    INTENT_PARTLY_UNSUPPORTED = "INTENT_PARTLY_UNSUPPORTED"
+    INTENT_CONTRACT_FILTER = "INTENT_CONTRACT_FILTER"
+    INTENT_OFF_TOPIC = "INTENT_OFF_TOPIC"
+    INTENT_QUESTION = "INTENT_QUESTION"
     # D. Attachment
+    ATTACHMENT_MISSING = "ATTACHMENT_MISSING"
+    ATTACHMENT_WRONG_TYPE = "ATTACHMENT_WRONG_TYPE"
+    ATTACHMENT_MULTIPLE = "ATTACHMENT_MULTIPLE"
     ATTACHMENT_XLS_LEGACY = "ATTACHMENT_XLS_LEGACY"
     ATTACHMENT_MACROS = "ATTACHMENT_MACROS"
     # E. Workbook
@@ -68,14 +90,56 @@ class ErrorCode(StrEnum):
     PROFILE_INVARIANT = "PROFILE_INVARIANT"
     PROFILE_NOT_REVIEWED = "PROFILE_NOT_REVIEWED"
     PROFILE_UNMAPPED = "PROFILE_UNMAPPED"
+    PROFILE_QUOTE_MISMATCH = "PROFILE_QUOTE_MISMATCH"
+    PROFILE_INCOMPLETE = "PROFILE_INCOMPLETE"
     # H. Calculation
     CALC_DENOMINATOR = "CALC_DENOMINATOR"
     CALC_AT_THRESHOLD = "CALC_AT_THRESHOLD"
     CALC_NO_ROUNDING_RULE = "CALC_NO_ROUNDING_RULE"
+    # I. Reply and send
+    REPLY_LLM_UNAVAILABLE = "REPLY_LLM_UNAVAILABLE"
+    REPLY_NUMBER_MISMATCH = "REPLY_NUMBER_MISMATCH"
+    SEND_FAILED = "SEND_FAILED"
+    SEND_ALREADY_DONE = "SEND_ALREADY_DONE"
+    # J. Waiting for input
+    WAIT_TIMEOUT = "WAIT_TIMEOUT"
+    # K. Infrastructure
+    INFRA_IMAP_DOWN = "INFRA_IMAP_DOWN"
+    INFRA_MAILBOX_AUTH = "INFRA_MAILBOX_AUTH"
+    INFRA_IMAP_FOLDER_MISSING = "INFRA_IMAP_FOLDER_MISSING"
+    INFRA_UNEXPECTED = "INFRA_UNEXPECTED"
 
 
 # Default severity per code (FAILURES.md "Reaction"); a caller may override it.
 SEVERITY: dict[ErrorCode, Severity] = {
+    ErrorCode.GATE_SENDER_REJECTED: Severity.REJECT,
+    ErrorCode.GATE_AUTH_FAILED: Severity.REJECT,
+    ErrorCode.GATE_LOOP: Severity.IGNORE,
+    ErrorCode.GATE_NOT_ADDRESSED: Severity.REJECT,
+    ErrorCode.GATE_DUPLICATE: Severity.IGNORE,
+    ErrorCode.MAIL_TOO_LARGE: Severity.ASK,
+    ErrorCode.MAIL_UNPARSEABLE: Severity.ASK,
+    ErrorCode.ATTACHMENT_TNEF: Severity.ASK,
+    ErrorCode.ATTACHMENT_ARCHIVE: Severity.ASK,
+    ErrorCode.ATTACHMENT_LINK_ONLY: Severity.ASK,
+    ErrorCode.INTENT_LLM_UNAVAILABLE: Severity.INFO,
+    ErrorCode.INTENT_AMBIGUOUS: Severity.INFO,
+    ErrorCode.INTENT_PARTLY_UNSUPPORTED: Severity.INFO,
+    ErrorCode.INTENT_CONTRACT_FILTER: Severity.INFO,
+    ErrorCode.INTENT_OFF_TOPIC: Severity.INFO,
+    ErrorCode.INTENT_QUESTION: Severity.INFO,
+    ErrorCode.ATTACHMENT_MISSING: Severity.ASK,
+    ErrorCode.ATTACHMENT_WRONG_TYPE: Severity.ASK,
+    ErrorCode.ATTACHMENT_MULTIPLE: Severity.ASK,
+    ErrorCode.REPLY_LLM_UNAVAILABLE: Severity.INFO,
+    ErrorCode.REPLY_NUMBER_MISMATCH: Severity.INFO,
+    ErrorCode.SEND_FAILED: Severity.WARN,
+    ErrorCode.SEND_ALREADY_DONE: Severity.IGNORE,
+    ErrorCode.WAIT_TIMEOUT: Severity.INFO,
+    ErrorCode.INFRA_IMAP_DOWN: Severity.WARN,
+    ErrorCode.INFRA_MAILBOX_AUTH: Severity.BLOCK,
+    ErrorCode.INFRA_IMAP_FOLDER_MISSING: Severity.BLOCK,
+    ErrorCode.INFRA_UNEXPECTED: Severity.BLOCK,
     ErrorCode.ATTACHMENT_XLS_LEGACY: Severity.ASK,
     ErrorCode.ATTACHMENT_MACROS: Severity.INFO,
     ErrorCode.XLSX_ENCRYPTED: Severity.ASK,
@@ -117,6 +181,8 @@ SEVERITY: dict[ErrorCode, Severity] = {
     ErrorCode.PROFILE_INVARIANT: Severity.PARTIAL,
     ErrorCode.PROFILE_NOT_REVIEWED: Severity.WARN,
     ErrorCode.PROFILE_UNMAPPED: Severity.PARTIAL,
+    ErrorCode.PROFILE_QUOTE_MISMATCH: Severity.WARN,
+    ErrorCode.PROFILE_INCOMPLETE: Severity.WARN,
     ErrorCode.CALC_DENOMINATOR: Severity.PARTIAL,
     ErrorCode.CALC_AT_THRESHOLD: Severity.WARN,
     ErrorCode.CALC_NO_ROUNDING_RULE: Severity.INFO,
@@ -124,6 +190,43 @@ SEVERITY: dict[ErrorCode, Severity] = {
 
 # German reply templates, keyed by code (or "CODE.variant"); filled with str.format.
 MESSAGES_DE: dict[str, str] = {
+    "GATE_SENDER_REJECTED": "Absender {sender} ist nicht freigegeben.",
+    "GATE_AUTH_FAILED": "Absender {sender}: DMARC-Prüfung nicht bestanden ({dmarc}).",
+    "GATE_LOOP": "Automatische Nachricht oder eigene Nachricht ignoriert ({reason}).",
+    "GATE_NOT_ADDRESSED": "Nachricht nicht an {address} adressiert.",
+    "GATE_DUPLICATE": "Nachricht {message_id} wurde bereits verarbeitet.",
+    "MAIL_TOO_LARGE": "Die Nachricht ist zu groß ({size_mb} MB, Grenze {limit_mb} MB). Bitte "
+    "nur den Wirtschaftsplan als Excel-Datei senden.",
+    "MAIL_UNPARSEABLE": "Ihre Nachricht konnte nicht gelesen werden.",
+    "ATTACHMENT_TNEF": "Der Anhang {file} kam im Outlook-Sonderformat (winmail.dat) an. Bitte "
+    "den Wirtschaftsplan als normale Excel-Datei (.xlsx) senden, z. B. mit Nachrichtenformat "
+    "„HTML“ statt „Rich-Text“.",
+    "ATTACHMENT_ARCHIVE": "Der Anhang {file} ist ein Archiv. Bitte die Excel-Datei (.xlsx) "
+    "entpackt anhängen.",
+    "ATTACHMENT_LINK_ONLY": "Ich kann keine Links öffnen ({host}). Bitte den Wirtschaftsplan als "
+    "Excel-Datei (.xlsx) direkt anhängen.",
+    "INTENT_LLM_UNAVAILABLE": "Anfrage regelbasiert eingeordnet (Sprachmodell nicht erreichbar).",
+    "INTENT_AMBIGUOUS": "Ich habe Ihre Nachricht als Covenant-Prüfung verstanden.",
+    "INTENT_PARTLY_UNSUPPORTED": "Nicht unterstützt und daher nicht bearbeitet: {what}.",
+    "INTENT_CONTRACT_FILTER": "Geprüft wurden nur: {chosen}. Weitere Verträge mit Covenants: "
+    "{others}.",
+    "INTENT_OFF_TOPIC": "Ich prüfe Financial Covenants anhand von Wirtschaftsplänen.",
+    "INTENT_QUESTION": "Rückfragen zu früheren Ergebnissen kann ich noch nicht beantworten.",
+    "ATTACHMENT_MISSING": "Bitte den Wirtschaftsplan als Excel-Datei (.xlsx) anhängen.",
+    "ATTACHMENT_WRONG_TYPE": "Erhalten: {file}. Ich benötige den Wirtschaftsplan als "
+    "Excel-Datei (.xlsx).",
+    "ATTACHMENT_MULTIPLE": "Mehrere Excel-Dateien erhalten: {files}. Welche Datei soll ich "
+    "prüfen? Bitte nur diese erneut senden.",
+    "REPLY_LLM_UNAVAILABLE": "Antworttext aus der Vorlage (Sprachmodell nicht erreichbar).",
+    "REPLY_NUMBER_MISMATCH": "Umformulierter Text verworfen (Zahl nicht im Ergebnis: {numbers}); "
+    "Vorlage verwendet.",
+    "SEND_FAILED": "Versand fehlgeschlagen: {detail}.",
+    "SEND_ALREADY_DONE": "Antwort {message_id} wurde bereits gesendet.",
+    "WAIT_TIMEOUT": "Keine Rückmeldung innerhalb von {days} Tagen; Vorgang beendet.",
+    "INFRA_IMAP_DOWN": "Postfach nicht erreichbar: {detail}.",
+    "INFRA_MAILBOX_AUTH": "Anmeldung am Postfach fehlgeschlagen ({host}).",
+    "INFRA_IMAP_FOLDER_MISSING": "IMAP-Ordner {folder} existiert nicht.",
+    "INFRA_UNEXPECTED": "Bei der Verarbeitung ist ein unerwarteter Fehler aufgetreten.",
     "ATTACHMENT_XLS_LEGACY": "Die Datei {file} ist im alten Format .xls. Bitte im Format .xlsx "
     "speichern und erneut senden.",
     "ATTACHMENT_MACROS": "Die Datei {file} enthält Makros. Makros wurden nicht ausgeführt, "
@@ -197,6 +300,9 @@ MESSAGES_DE: dict[str, str] = {
     "abbilde: {parts}.",
     "PROFILE_UNMAPPED.assumption": "{covenant}: {text} – im Plan nicht abbildbar; Annahme: "
     "{handling}.",
+    "PROFILE_QUOTE_MISMATCH": "Vertragsprofil {contract}: {detail}.",
+    "PROFILE_INCOMPLETE": "Vertragsprofil {contract}: Kennzahl-Erwähnung ohne Covenant oder "
+    "Begründung – {detail}",
     "CALC_DENOMINATOR": "{covenant}: Nenner = {value} ≤ 0, Kennzahl nicht definiert.",
     "CALC_AT_THRESHOLD": "{covenant}: eingehalten, kein Spielraum ({value} = Grenzwert).",
     "CALC_NO_ROUNDING_RULE": "{covenant}: Vertrag nennt keine Rundung; gerechnet mit "

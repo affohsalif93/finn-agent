@@ -37,6 +37,7 @@ Code checks these after the intent classification; anything missing → `ASK`.
 | `GATE_SENDER_REJECTED` | sender not allowed | `ALLOWED_SENDERS` rules | REJECT | – | ✅ | `mail_unknown_sender.eml` |
 | `GATE_AUTH_FAILED` | SPF/DKIM/DMARC fail (if required) | `Authentication-Results` | REJECT | – | ✅ | `mail_dmarc_fail.eml` |
 | `GATE_LOOP` | auto-reply, bulk, own address | `Auto-Submitted`, `Precedence`, `X-Autoreply`, `From` | IGNORE | – | ✅ | `mail_auto_reply.eml` |
+| `GATE_NOT_ADDRESSED` | mail in Finn's folder not addressed to `FINN_ADDRESS` (To / Cc / Delivered-To) | headers | REJECT | – | ✅ | gate unit test |
 | `GATE_DUPLICATE` | same Message-ID again | Temporal workflow ID | IGNORE | – | ✅ | test only |
 | `GATE_LICENCE_EXPIRED` | tenant licence expired | tenant registry | reply once, notify admin, then IGNORE | "Lizenz abgelaufen, bitte Administrator kontaktieren." | 📐 stub | – |
 | `MAIL_TOO_LARGE` | mail above size limit (e.g. 25 MB) | size before download | ASK | "Die Nachricht ist zu groß (… MB). Bitte nur den Wirtschaftsplan senden." | ✅ | test only |
@@ -127,6 +128,8 @@ Code checks these after the intent classification; anything missing → `ASK`.
 | `PROFILE_NOT_REVIEWED` | profile `review.status = draft` used at runtime | load | compute; WARN | "Vertragsprofil V… ist noch nicht fachlich geprüft." | ✅ | test profile |
 | `PROFILE_UNMAPPED` | `unmapped_components` non-empty | profile | `effect: manual_review` → that covenant "manuelle Prüfung"; `effect: assumption` (the plan cannot show it either, V4 (e)) → computed, INFO with the handling text | "Covenant … enthält Bestandteile, die ich nicht automatisch abbilde: …" | ✅ | test profile |
 | `CONTRACT_NEW_FILE` | contract in the folder without a profile | folder scan | WARN; product: start onboarding | "Neuer Vertrag ohne geprüftes Profil: …" | ✅ detect | test only |
+| `PROFILE_QUOTE_MISMATCH` | a `sources[]` quote is not verbatim on its stated page (whitespace / typographic quotes normalised) | `finn contracts check` / `extract` / `approve` (`contracts/validate.py`) | near misses (wrong page, punctuation only) are repaired at extraction and noted; anything else: `finn contracts check` fails, `approve` refuses | (onboarding only) | ✅ | unit test |
+| `PROFILE_INCOMPLETE` | completeness scan: a clause naming a ratio (Eigenkapitalquote, Verschuldungsgrad, DSCR, EBITDA, Kennzahl, Covenant) or a %/ratio bound is covered neither by a source of the profile nor by restating known covenants | `finn contracts check` / `extract` (`contracts/completeness.py`) | hint; the reviewer adds the covenant or a dismissed mention | (onboarding only) | ✅ | mutated gold profiles |
 
 ## H. Calculation
 
@@ -161,4 +164,5 @@ Code checks these after the intent classification; anything missing → `ASK`.
 | `INFRA_IMAP_DOWN` | IMAP unreachable | poller logs, backs off, next cycle; mail stays in the inbox | ✅ |
 | `INFRA_MAILBOX_AUTH` | mailbox login fails | non-retryable; operator alert | ✅ |
 | `INFRA_WORKER_CRASH` | worker restarts | Temporal resumes at the last completed step | ✅ |
+| `INFRA_IMAP_FOLDER_MISSING` | `IMAP_FOLDER` (Gmail label) does not exist | SELECT → NONEXISTENT | log error with the fix (create label + filter), back off, next cycle; never falls back to INBOX | ✅ |
 | `INFRA_UNEXPECTED` | any unhandled exception | sender: polite mail with reference ID; operator: `error.txt` + stack trace | ✅ |

@@ -1,0 +1,95 @@
+{#- Plain-text part. One template for every variant: a section renders only if the context fills it. -#}
+{{ salutation }}
+
+{{ intro }}
+{% if items %}
+
+{% for item in items %}
+- {{ item }}
+{% endfor %}
+{% endif %}
+{% if checked %}
+
+GEPRÜFTE EINGABE
+{% for line in checked %}
+{{ line }}
+{% endfor %}
+{% if input_status %}
+{{ input_status }}
+{% endif %}
+{% endif %}
+{% if warnings %}
+
+Achtung:
+{% for w in warnings %}
+- {{ w }}
+{% endfor %}
+{% endif %}
+{% if infos %}
+
+Hinweise zur Eingabe:
+{% for i in infos %}
+- {{ i }}
+{% endfor %}
+{% endif %}
+{% if summary %}
+
+ERGEBNIS
+{% for s in summary %}
+{{ s }}
+{% endfor %}
+{% if early_warning %}
+{{ early_warning }}
+{% endif %}
+{% endif %}
+{% if rows %}
+
+ÜBERSICHT
+{{ text_table(table_headers, rows) }}
+{% endif %}
+{% if paths %}
+
+RECHENWEG
+{% for p in paths %}
+
+{{ p.title }}: {{ p.status }}
+{% if p.source %}
+  Vertrag: {{ p.source }}
+{% endif %}
+{% if p.more_sources %}
+  {{ p.more_sources }}
+{% endif %}
+{% if p.formula %}
+  {{ p.formula }}
+{% endif %}
+{% for s in p.sub_formulas %}
+  {{ s }}
+{% endfor %}
+{% for l in p.lines %}
+  {{ "    " * l.level }}{{ l.text }}
+{% endfor %}
+{% for n in p.notes %}
+  {{ n }}
+{% endfor %}
+{% endfor %}
+{% endif %}
+{% if notes %}
+
+HINWEISE
+{% for n in notes %}
+- {{ n }}
+{% endfor %}
+{% endif %}
+{% if closing %}
+
+{% for c in closing %}
+{{ c }}
+{% endfor %}
+{% endif %}
+
+Mit freundlichen Grüßen
+Finn
+
+{% for f in footer %}
+{{ f }}
+{% endfor %}

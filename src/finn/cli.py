@@ -133,20 +133,61 @@ def check(
     typer.echo(report.model_dump_json(indent=2) if as_json else render_report(report))
 
 
+@app.command()
+def process(
+    path: Annotated[Path, typer.Argument(exists=True, dir_okay=False, help="Mail (.eml).")],
+    send: Annotated[
+        bool, typer.Option("--send", help="Really send the reply via SMTP (default: print only).")
+    ] = False,
+    no_gate: Annotated[
+        bool, typer.Option("--no-gate", help="Skip the gate (sender / recipient rules).")
+    ] = False,
+    html: Annotated[bool, typer.Option("--html", help="Print the HTML part instead.")] = False,
+) -> None:
+    """Direct runner (no Temporal): parse → intent → plan → calculate → reply; prints the reply."""
+    from finn.pipeline import process_eml
+
+    settings = get_settings()
+    connector = None
+    if send:
+        from finn.mail.imap_smtp import ImapSmtpConnector
+
+        connector = ImapSmtpConnector(settings)
+    result = process_eml(path, settings, send=send, connector=connector, check_gate=not no_gate)
+    if result.rejected is not None:
+        typer.echo(
+            f"Vom Gate abgelehnt ({result.rejected.event}, {result.rejected.code}): "
+            f"{result.rejected.reason}. Mit --no-gate trotzdem verarbeiten.",
+            err=True,
+        )
+        raise typer.Exit(code=3)
+    for d in result.drafts:
+        typer.echo(f"An: {d.to}\nBetreff: {d.subject}\nMessage-ID: <{d.message_id}>\n")
+        typer.echo(d.html if html else d.text)
+    for s in result.sent:
+        state = "bereits gesendet, übersprungen" if s.skipped_already_sent else "gesendet"
+        typer.echo(f"[{state}] <{s.message_id}>", err=True)
+    typer.echo(f"Laufordner: {result.run_dir}", err=True)
+
+
 _PROFILE_ERRORS = {
     "PROFILE_MISSING",
     "PROFILE_INVALID_RECIPE",
     "PROFILE_INVARIANT",
     "PROFILE_EXAMPLE_MISMATCH",
+    "PROFILE_QUOTE_MISMATCH",
     "CONTRACT_CHANGED",
 }
 
 
 @contracts_app.command("check")
 def contracts_check(profiles: ProfilesOption = None) -> None:
-    """Validate the profiles (schema, sources, recipes, contract hash) and run their examples."""
+    """Validate the profiles (schema, sources, recipes, contract hash, quotes, completeness scan)
+    and run their examples."""
+    from finn.contracts.pdf_text import load_contract_text
     from finn.contracts.selftest import check_examples, example_value
     from finn.contracts.store import load_profiles
+    from finn.contracts.validate import text_findings
     from finn.numbers import format_de
 
     settings = get_settings()
@@ -154,6 +195,9 @@ def contracts_check(profiles: ProfilesOption = None) -> None:
     loaded, findings = load_profiles(directory, settings.contracts_dir)
     for profile in loaded:
         findings += check_examples(profile)
+        pdf = settings.contracts_dir / profile.document.file
+        if pdf.is_file():  # missing PDF: CONTRACT_CHANGED.missing from the store
+            findings += text_findings(profile, load_contract_text(pdf))
         covenants = ", ".join(c.covenant_id for c in profile.covenants) or "keine Covenants"
         typer.echo(f"{profile.contract_id} ({profile.review.status}): {covenants}")
         for example in profile.examples:
@@ -170,3 +214,124 @@ def contracts_check(profiles: ProfilesOption = None) -> None:
                f"{len(findings) - len(errors)} Hinweise.")  # fmt: skip
     if errors:
         raise typer.Exit(code=1)
+
+
+ContractsDirOption = Annotated[
+    Path | None,
+    typer.Option("--contracts", file_okay=False, help="Contract PDFs; default: CONTRACTS_DIR."),
+]
+
+
+@contracts_app.command("extract")
+def contracts_extract(
+    only: Annotated[
+        list[str] | None, typer.Option("--only", help="Contract id(s), e.g. --only V4.")
+    ] = None,
+    out: Annotated[
+        Path | None,
+        typer.Option("--out", file_okay=False, help="Output folder; default: PROFILES_DIR."),
+    ] = None,
+    force: Annotated[
+        bool, typer.Option("--force", help="Re-extract even if PDF and prompt are unchanged.")
+    ] = False,
+    no_review: Annotated[
+        bool, typer.Option("--no-review", help="Skip the second LLM pass (review).")
+    ] = False,
+    contracts: ContractsDirOption = None,
+) -> None:
+    """LLM extraction of the contract PDFs into draft profiles (+ <id>.review.json)."""
+    from finn.contracts.extract import run_extract
+    from finn.contracts.report import render_extract_runs
+    from finn.llm.client import usage_log
+
+    settings = get_settings()
+    runs = run_extract(
+        contracts or settings.contracts_dir,
+        out or settings.profiles_dir,
+        only=only,
+        force=force,
+        with_review=not no_review,
+    )
+    typer.echo(render_extract_runs(runs, usage_log()))
+    if any(r.status == "failed" for r in runs):
+        raise typer.Exit(code=1)
+
+
+@contracts_app.command("eval")
+def contracts_eval(
+    profiles: ProfilesOption = None,
+    gold: Annotated[
+        Path, typer.Option("--gold", file_okay=False, help="Hand-written gold profiles.")
+    ] = Path("tests/fixtures/profiles_gold"),
+    plan: Annotated[
+        Path, typer.Option("--plan", dir_okay=False, help="Plan for the answer-key run.")
+    ] = Path("material/Wirtschaftsplan_2027.xlsx"),
+    verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Show passed checks.")] = False,
+) -> None:
+    """Compare extracted profiles with the gold profiles and run the answer key with them."""
+    from finn.contracts.eval import answer_key_checks, evaluate_dirs
+    from finn.contracts.store import load_profiles
+
+    directory = _profiles_dir(profiles)
+    extracted, problems = load_profiles(directory)
+    gold_profiles, _ = load_profiles(gold)
+    for f in problems:
+        if f.code != "PROFILE_NOT_REVIEWED":
+            typer.echo(f"[{f.severity}] {f.code}: {f.message_de}")
+    results = evaluate_dirs(extracted, gold_profiles)
+    for ev in results:
+        typer.echo("\n".join(ev.lines(verbose=verbose)))
+    passed = sum(e.passed for e in results)
+    total = sum(len(e.checks) for e in results)
+    typer.echo(f"Gesamt: {passed}/{total} Prüfpunkte ({passed / total:.0%})" if total else "")
+    key = answer_key_checks(extracted, plan)
+    typer.echo("\n".join(c.line() for c in key))
+    if not all(c.ok for c in key):
+        raise typer.Exit(code=1)
+
+
+@contracts_app.command("approve")
+def contracts_approve(
+    contract_id: Annotated[str, typer.Argument(help="Contract id, e.g. V4.")],
+    by: Annotated[str, typer.Option("--by", help="Name of the reviewer.")],
+    profiles: ProfilesOption = None,
+    note: Annotated[str | None, typer.Option("--note", help="Review note.")] = None,
+    force: Annotated[
+        bool, typer.Option("--force", help="Approve despite quote / recipe errors.")
+    ] = False,
+) -> None:
+    """Human review step: set review.status = reviewed (+ reviewed_by / reviewed_at)."""
+    import datetime as dt
+
+    from finn.contracts.extract import write_profile
+    from finn.contracts.pdf_text import load_contract_text
+    from finn.contracts.store import load_profile
+    from finn.contracts.validate import validate_profile
+
+    settings = get_settings()
+    directory = profiles or settings.profiles_dir
+    path = directory / f"{contract_id}.json"
+    profile, problems = load_profile(path) if path.is_file() else (None, [])
+    if profile is None:
+        detail = "; ".join(f.message_de for f in problems) or "nicht gefunden"
+        typer.echo(f"Profil {path}: {detail}", err=True)
+        raise typer.Exit(code=2)
+    pdf = settings.contracts_dir / profile.document.file
+    if pdf.is_file():
+        report = validate_profile(profile, load_contract_text(pdf))
+        if not report.ok:
+            typer.echo("\n".join(report.lines()), err=True)
+            if not force:
+                typer.echo("Nicht freigegeben (--force übergeht die Prüfung).", err=True)
+                raise typer.Exit(code=1)
+    notes = "\n".join(filter(None, [profile.review.notes, note]))
+    review = profile.review.model_copy(
+        update={
+            "status": "reviewed",
+            "reviewed_by": by,
+            "reviewed_at": dt.datetime.now(dt.UTC).date(),
+            "notes": notes or None,
+        }
+    )
+    write_profile(path, profile.model_copy(update={"review": review}))
+    typer.echo(f"{contract_id}: freigegeben von {by}.")

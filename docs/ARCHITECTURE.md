@@ -37,6 +37,13 @@ PDF ─► page texts (cached, hashed) ─► LLM extraction (full text, fixed s
 ```
 Command: `finn contracts extract` (re-runs only for changed hashes) · `finn contracts check` (validation only). A developer command, not a service (§13.2).
 
+As built (increment 6):
+- **Draft schema instead of the profile as structured output.** OpenAI strict JSON schema requires every property and allows no free-form maps; the profile has dicts (`conditions`, `definitions`, `label_hints`, `examples[].inputs`), defaults and decimals. The LLM returns `ProfileDraft` (`contracts/draft.py`: lists with `id`/`key`, explicit `null`, decimals as strings, no file/hash/review fields); code converts it into a `ContractProfile` and fills `document`, `extraction` (model, `prompt_version`, `extracted_at`, `source_sha256`) and `review.status = draft`. A draft that fails validation is sent back once with the errors.
+- **Quotes:** near misses (right text on another page, or only punctuation / case differ) are replaced by the exact page text and noted in `review.notes`; anything else is reported (`PROFILE_QUOTE_MISMATCH`).
+- **Review output:** the second pass is stored as `<id>.review.json` next to the profile (LLM issues + validation lines + uncovered completeness hits); the store ignores `*.review.json`.
+- **Re-extraction** when the PDF hash or the prompt version changed; the prompt version is `v1-<hash of both prompts and both schemas>`, so any prompt edit counts.
+- **Eval and approval:** `finn contracts eval` (semantic diff against the gold profiles + answer key with the extracted profiles), `finn contracts approve V4 --by NAME` (the human review step; refuses while quotes / recipes fail).
+
 ### 2.2 Mail run (every request)
 ```
 poller:    fetch ─► gate (headers only) ─► save .eml + attachments ─► start / signal workflow
@@ -502,6 +509,15 @@ every POLL_INTERVAL_SECONDS:
 ```
 Robustness rules: (1) never lose a mail: mark processed only after the workflow start; (2) never process twice: Message-ID dedup; (3) never send twice: deterministic reply Message-ID + `was_sent` check; (4) outages: log, back off, next cycle, nothing is lost because the mail stays in the inbox; (5) auth failures are loud: operator alert, no retry loop; (6) defensive parsing with size limits, keep the raw `.eml`; (7) fixture tests with real mails (Outlook, Gmail, Apple Mail, forwarded, umlauts in filenames, auto-reply, no attachment).
 
+**As built (Gmail, Nov 2026):**
+- Finn reads **only** `IMAP_FOLDER` (a Gmail label, default `Finn`, filled by a filter on the plus alias `FINN_ADDRESS`), never INBOX. A missing label → `INFRA_IMAP_FOLDER_MISSING` in the log, back-off, retry next cycle.
+- **Processed = moved** with `UID MOVE` to `IMAP_PROCESSED_FOLDER` (default `<folder>/Verarbeitet`, created on first use; COPY + `\Deleted` + EXPUNGE without MOVE). On Gmail that swaps the label; the mail stays in "All Mail". Custom IMAP keywords are not reliable on Gmail, folders are, and the state is visible in the web UI. Rejected mail is moved there too (after the security log event). Bodies are fetched with `BODY.PEEK[]`; mails above `MAX_MAIL_MB` only with their header (`MAIL_TOO_LARGE` → ASK reply).
+- **Sent detection:** the Sent folder is found by its `\Sent` SPECIAL-USE flag (the name is localised); `was_sent` searches it by Message-ID (`X-GM-RAW "rfc822msgid:<id>"` on Gmail, `HEADER Message-ID` elsewhere), after a local marker `runs/<id>/sent/<hash>.json`.
+- The poller saves only the raw `.eml`; **attachments are extracted by `parse_message`** (first workflow step) into the run folder, so a broken MIME part fails a retryable activity, not the poller. `InboundMessage.raw` holds the bytes in the poller's memory only (excluded from every serialisation).
+- **Thread signalling:** for a mail with `In-Reply-To` / `References`, the poller checks each referenced Message-ID (nearest first) for a RUNNING `CovenantCheckWorkflow` and queries `state`; only one that `waiting_for_input` gets the `new_message` signal (the follow-up is saved to `<run>/followup_<hash>/`). Otherwise a new workflow starts (case C / late follow-up). Finn's replies keep the original `References`, so a reply to Finn's question still names the starting Message-ID.
+- **Loop protection:** Finn's mails carry `Auto-Submitted: auto-replied`, `X-Auto-Response-Suppress: All` and `X-Finn-Run: <run id>`; the gate ignores all three plus `Precedence: bulk/list/junk`, `X-Autoreply`, mailer-daemon and `From = FINN_ADDRESS`. The account address itself (`IMAP_USER`) is a normal sender (demo / live test).
+- Sender rule precedence as implemented: exact deny → exact allow → most specific matching pattern (`@x.de` beats `@*.x.de`, longer domains beat shorter; a deny wins a tie) → reject.
+
 ### 6.1a State diagram (demo)
 
 ✅ built · 🛡️ resilience path, built · 📐 designed, stub or not built
@@ -672,8 +688,10 @@ CovenantCheckWorkflow(message_ref)                 workflow ID = Message-ID (gat
 A plain long-running process (compose `restart: unless-stopped`), **not a Temporal workflow** (D20). Loop, gate and robustness rules: §6.1. Its only Temporal calls are `start_workflow` and `signal`; the workflow receives paths, never file contents.
 Two kinds of retry: **poller** = no retry logic, the next cycle is the retry (mail stays in the inbox); **workflow** = Temporal retry policies per activity (parse, LLM, send).
 
+**As built:** activities are methods of `FinnActivities(settings, connector_factory)` (sync, thread pool; the mailbox is injected so tests use a fake). Retry policies: parse 3× (2 s backoff); `classify_intent` / `render_reply` 5× (the LLM client already retries; `LLMUnavailable` is caught inside the step → rule fallback / template, so these normally succeed); `load_and_validate_plan` / `calculate` once; `send_reply` 12× from 5 s up to 10 min (~1 h of SMTP outage). `InputError` (validation) and `MailAuthError` are non-retryable. The workflow waits with `workflow.wait_condition(timeout=WAIT_FOR_INPUT_DAYS)`; timeout → `RunOutcome(status="wait_timeout")`, no mail. An activity failure → `record_failure` (`error.txt`) + polite error mail with the reference, then the workflow fails (visible in the UI). Reply Message-IDs: `finn.<sha256(workflow id | seq | kind)[:24]>.<seq>@<account domain>`. The client uses the pydantic data converter (`runtime.connect`).
+
 ### 7.5 Direct runner
-`finn process path/to/mail.eml [--no-send]`: same activities, called in sequence without Temporal. Used for tests, development and as a safety net in the demo.
+`finn process path/to/mail.eml [--send] [--no-gate] [--html]`: same pipeline functions, called in sequence without Temporal; prints the reply and **does not send unless `--send`**. ASK / BLOCK end the run after the question. Used for tests, development and as a safety net in the demo.
 
 ## 8. LLM usage
 
@@ -702,6 +720,8 @@ Two kinds of retry: **poller** = no retry logic, the next cycle is the retry (ma
 ### 8.2 Client
 - OpenAI structured outputs (JSON schema), low temperature, model configurable via env.
 - SDK retries with exponential backoff; timeouts set.
+- As built (`llm/client.py`): `complete_structured(system, user, schema, purpose, trace_id, session_id, model, temperature)` on the Responses API (`responses.parse`, strict schema from the pydantic model, `store=False`). Default model `gpt-6.1-sol` (`OPENAI_MODEL`, empty = default): the balanced GPT-6.1 tier for long-document structured extraction (1M context, structured outputs, $2 / $10 per 1M tokens). `temperature` is not sent to reasoning model families (they reject it); determinism comes from the schema, the deterministic checks and the human review. `OPENAI_TIMEOUT_SECONDS` (300) and `OPENAI_MAX_RETRIES` (3) go to the SDK. Everything that still fails (no key, retries exhausted, refusal, truncated or invalid answer) raises `LLMUnavailable`. `purpose` / `trace_id` / `session_id` are logged now and become Langfuse attributes later; prompts are never logged.
+- Signatory masking (§8.1) is rule-based (`contracts/pdf_text.py`): names after "Herr/Frau/gez./i. V.", titled names ("Dr. …"), and word runs in signature blocks that are neither words of the contract body nor organisation / role words. The four sample contracts carry roles only, so nothing is masked there.
 - Provider failover: **documented, not built** (retry first, then a second provider with the same schema; validation catches schema drift).
 
 ## 9. Observability (D13)
@@ -734,10 +754,12 @@ Later: Temporal → OpenTelemetry → Langfuse for one end-to-end trace.
 ## 11. Configuration (`.env`, never committed)
 
 ```
-OPENAI_API_KEY, OPENAI_MODEL
+OPENAI_API_KEY, OPENAI_MODEL (empty = gpt-6.1-sol), OPENAI_TIMEOUT_SECONDS=300, OPENAI_MAX_RETRIES=3   (last two optional, not in .env.example)
 IMAP_HOST=imap.gmail.com, IMAP_PORT=993, IMAP_USER, IMAP_PASSWORD   (Gmail app password)
 SMTP_HOST=smtp.gmail.com, SMTP_PORT=465, SMTP_USER, SMTP_PASSWORD
 FINN_ADDRESS, ALLOWED_SENDERS=*, REQUIRE_DMARC_PASS=false
+IMAP_FOLDER=Finn, IMAP_PROCESSED_FOLDER=(empty = <IMAP_FOLDER>/Verarbeitet), SMTP_FROM_NAME=Finn (Covenant-Prüfung)
+MAX_MAIL_MB=25, WAIT_FOR_INPUT_DAYS=7, REPLY_LLM_POLISH=true   (optional)
 CONTRACTS_DIR=material, PROFILES_DIR=data/contract_profiles, RUNS_DIR=runs
 TEMPORAL_ADDRESS=temporal:7233, TEMPORAL_TASK_QUEUE=finn
 LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY, LANGFUSE_HOST=https://cloud.langfuse.com   (optional, EU region)
@@ -760,7 +782,8 @@ src/finn/
 │   ├── mail.py            InboundMessage, ParsedMessage, Attachment, Request, ReplyDraft, SentRecord
 │   ├── plan.py            CellRef, PlanValue, PlanFact, LoanLine, Plan, WorkbookSkeleton, PlanMapping
 │   ├── contract.py        ContractProfile, Covenant, Recipe, Component, ContractSource
-│   └── result.py          CovenantResult, Used/Excluded, ContractNote, Report, RunRecord
+│   ├── result.py          CovenantResult, Used/Excluded, ContractNote, Report, RunRecord
+│   └── run.py             step inputs / outputs = activity payloads (StartRun, RenderInput, RunOutcome, …)
 │
 │ ── core logic ──
 ├── plan/                  Excel → building blocks + facts + findings
@@ -782,18 +805,21 @@ src/finn/
 │   ├── render.py          text output for `finn check`
 │   └── engine.py          all profiles × plan → Report (+ loan checks, notes)
 ├── contracts/             onboarding + loading
-│   ├── pdf_text.py        page texts with page numbers (cached by hash)
-│   ├── extract.py         LLM extraction → draft profile (structured output)
-│   ├── prompts/           extraction + review prompts (versioned files)
-│   ├── validate.py        quotes exist on the page, schema, whitelist
+│   ├── pdf_text.py        page texts with page numbers (cached by hash in data/.cache/), masking
+│   ├── draft.py           LLM draft schema (strict-schema friendly) → ContractProfile; review schema
+│   ├── extract.py         LLM extraction → draft profile (structured output), review pass, batch
+│   ├── prompts/           extraction.v1.md, review.v1.md (versioned files)
+│   ├── validate.py        quotes exist on the page, schema, whitelist, thresholds parse
 │   ├── completeness.py    keyword scan: every hit = covenant or dismissed with reason
+│   ├── eval.py            extracted vs. gold profiles (semantic diff, score), answer key
+│   ├── report.py          text output for `finn contracts extract` (incl. token cost)
 │   ├── selftest.py        run `examples` through the evaluator (`finn contracts check`)
 │   └── store.py           load profiles, hash check against material/
 │
 │ ── adapters ──
 ├── mail/
 │   ├── connector.py       MailConnector protocol
-│   ├── imap_smtp.py       ImapSmtpConnector (imap-tools + smtplib), was_sent
+│   ├── imap_smtp.py       ImapSmtpConnector (stdlib imaplib + smtplib), was_sent
 │   ├── gate.py            gate.check() + sender rules, tenant/licence stubs
 │   ├── parse.py           .eml → ParsedMessage (attachments, TNEF/zip/link detection)
 │   └── thread.py          thread ID from In-Reply-To / References / subject
@@ -805,7 +831,8 @@ src/finn/
 ├── reply/
 │   ├── render.py          Report → template → (LLM polish) → ReplyDraft
 │   ├── number_check.py    every number in the text ∈ Report
-│   └── templates/         report.html.j2, report.txt.j2, block.*.j2, ask.*.j2, other.*.j2
+│   └── templates/         mail.html.j2, mail.txt.j2 (one pair; the context fills only the
+│                          sections a variant needs: result, ask, block, other, error)
 ├── runs.py                run folder: incoming.eml, checks.json, results.json, reply.html, …
 │
 │ ── orchestration ──
@@ -855,14 +882,18 @@ volumes:   ./runs (rw) · ./data/contract_profiles (ro) · ./material (ro) · te
 env_file:  .env (optional, never baked into the image); compose sets TEMPORAL_ADDRESS=temporal:7233
 ```
 End-to-end check: `docker compose run --rm finn-worker ping` → `pong` (placeholder `PingWorkflow` until the real workflow exists). Verified: restart of Temporal (worker reconnects with backoff), `down`/`up` keeps workflow history, SIGTERM shuts down cleanly.
-No database: workflow state lives in Temporal, the audit trail in `runs/`, profiles in the repo. OpenAI and Langfuse are external.
+No database for Finn itself: workflow state lives in Temporal, the audit trail in `runs/`, profiles in the repo. OpenAI is external.
+
+**Optional profile `observability`** (`docker compose --profile observability up -d`): self-hosted Langfuse v4 (web, worker, Postgres, ClickHouse, Redis, MinIO; trimmed from the official compose file, AI gateway left out), all ports on localhost, UI on :3000. Secrets (`LF_*`) and the project API keys live in `.env`; headless initialisation creates the organisation, project, keys and admin login on first start. The web container's healthcheck gates the worker (web runs the DB migrations). Langfuse v4 accepts traces only via its OpenTelemetry endpoint (`/api/public/otel`), which the Python SDK uses; the legacy `/api/public/ingestion` takes scores only. Verified: trace stored in ClickHouse. Memory: ~2 GB for the profile; a VM running it needs ≥ 4 GB (Langfuse recommends 16 GB for production). Without the profile, Finn's containers point at `http://langfuse-web:3000`, find nothing and trace nowhere (warning only).
 
 ### 13.2 Contract onboarding is a command, not a service
 ```
 developer (once per contract version):
   finn contracts extract   → LLM extraction → data/contract_profiles/V*.json (draft)
-  finn contracts check     → quotes, whitelist, completeness scan, eval vs. gold profiles
-  review the git diff      → commit the approved profiles
+  finn contracts check     → quotes, whitelist, completeness scan, examples
+  finn contracts eval      → semantic diff vs. gold profiles + answer key with the drafts
+  review the git diff + <id>.review.json
+  finn contracts approve V4 --by NAME   → review.status = reviewed; commit the approved profiles
 runtime: the worker only reads the profiles (read-only) and checks file hashes
 ```
 Also runnable in Docker: `docker compose run --rm finn-worker finn contracts extract`.
