@@ -35,9 +35,11 @@ def _utf8_console() -> None:
             stream.reconfigure(encoding="utf-8", errors="replace")
 
 
+_utf8_console()  # at import: `--help` exits before the callback runs
+
+
 @app.callback()
 def main() -> None:
-    _utf8_console()
     configure_logging(get_settings())
 
 
