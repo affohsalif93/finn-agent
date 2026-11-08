@@ -1,4 +1,4 @@
-"""Answer key (SCOPE.md §3) with the hand-written gold profiles and the sample plan."""
+"""Answer key (SCOPE.md) with the hand-written gold profiles and the sample plan."""
 
 import json
 from decimal import Decimal

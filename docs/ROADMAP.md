@@ -101,13 +101,13 @@ Each type gets its own extractor with the same pattern (full text → schema →
 - **Operator console (UI, run by us):** traces, errors, costs per customer, alerts.
 - **Multi-tenancy:** strict separation of mailboxes, profiles, data and traces per utility.
 - **Licensing and access:** tenant licence status (active / trial / expired), activation code at onboarding, **verified domains** (DNS TXT), users with roles (requester / approver), seats. Check per mail: tenant (by receiving mailbox) → licence → SPF/DKIM/DMARC → domain → user. Rejections logged; no replies to unknown senders (no information leak, no backscatter); alerts on repeated attempts.
-- **Mail connectors** (same interface as the case study's IMAP connector, D19). Preferred setup: **a Finn mailbox in the customer's own domain**.
+- **Mail connectors** (same interface as the case study's IMAP connector, D10). Preferred setup: **a Finn mailbox in the customer's own domain**.
   - **Microsoft 365 (shared mailbox):** the customer creates a shared mailbox (e.g. `finn@stadtwerke-x.de`); their admin grants consent to our multi-tenant Entra app (`Mail.ReadWrite`, `Mail.Send`, application permissions) and restricts it to that one mailbox (RBAC for Applications / Application Access Policy); they send us their tenant ID. We poll with Graph **delta queries** and reply via `/reply` (threading by M365).
   - **Google Workspace:** service account with domain-wide delegation limited to the Finn mailbox; `history.list` for new mail, send with `threadId`.
   - **Generic IMAP/SMTP:** for everyone else (case-study connector).
   - **Direct inbox (no customer mailbox):** the customer mails our address (e.g. `stadtwerke-x@finn.app`); tenant by recipient address. Needs our own domain + MX. Forwarding from the customer's mailbox breaks SPF, and M365 blocks external auto-forwarding by default.
   - **Scaling ingestion:** push (Graph change notifications, Gmail Pub/Sub) behind a **FastAPI** endpoint as trigger, plus periodic delta reconciliation, plus Message-ID dedup. Push alone can miss events.
-  - **Build vs. buy (checked Nov 2026):** Nylas (hosted, mail leaves us), EmailEngine (self-hosted, commercial, ~€1,200/year, stops without a licence), open source (Nylas Sync Engine unmaintained; imapapi IMAP only). Decision: build (D19); revisit at hundreds of mailboxes or real-time needs.
+  - **Build vs. buy:** Nylas (hosted, mail leaves us), EmailEngine (self-hosted, commercial, ~€1,200/year, stops without a licence), open source (Nylas Sync Engine unmaintained; imapapi IMAP only). Decision: build (D10); revisit at hundreds of mailboxes or real-time needs.
 - **Licence expiry policy (designed, not built):** reply once to the sender, notify the tenant admin (contact from company settings), then ignore further mail from that tenant (logged).
 - **Plan profiles:** LLM-proposed mapping of a new plan template, verified by accounting checks, confirmed once per customer, reused yearly.
 
@@ -115,7 +115,7 @@ Each type gets its own extractor with the same pattern (full text → schema →
 
 - Temporal in production: self-hosted with Postgres on AWS/Azure, or Temporal Cloud with **client-side payload encryption** (Temporal sees only encrypted data).
 - LLM provider failover: retries with backoff first, then a second provider with the same structured schema; validation guards schema drift. Health metrics per provider.
-- Observability (deferred, D13): Langfuse self-hosted or OpenTelemetry (Temporal → OTel → backend) for one trace per request and cost / latency / quality across runs and tenants; evaluation datasets (extraction vs. reviewed profiles) to catch regressions when models or prompts change. Learnings from the 7 Nov spike: Langfuse v4 accepts traces only via its OTel endpoint `/api/public/otel` (legacy `/api/public/ingestion` takes scores only); it needs Postgres + ClickHouse + Redis + S3 and ≥ 4 GB RAM; headless setup (org, project, API keys, admin) via `LANGFUSE_INIT_*`.
+- Observability (deferred, D13): Langfuse self-hosted or OpenTelemetry (Temporal → OTel → backend) for one trace per request and cost / latency / quality across runs and tenants; evaluation datasets (extraction vs. reviewed profiles) to catch regressions when models or prompts change. Self-hosted Langfuse v4 needs Postgres + ClickHouse + Redis + S3 and ≥ 4 GB RAM and accepts traces only via its OTel endpoint.
 - Data protection: EU hosting, data-processing agreements (AVV) with the LLM provider (and a tracing provider, if hosted), retention rules for run folders and traces.
   - LLM provider terms to verify before go-live: no training on API data, zero data retention, EU data residency.
   - Alternatives: Azure OpenAI in an EU region; a small self-hosted model for the intent call (simple classification).

@@ -1,4 +1,4 @@
-# Finn runtime: Temporal dev server + worker + poller (ARCHITECTURE.md §13).
+# Finn runtime: Temporal dev server + worker + poller (docs/ARCHITECTURE.md §11).
 #   docker compose up -d                                core stack
 #   Temporal UI: http://localhost:8233 (localhost only)
 
@@ -59,7 +59,7 @@ services:
     volumes:
       - ./runs:/app/runs
 
-  # ── Local test mail server (optional): `--profile testmail` (ARCHITECTURE §13.1) ──────
+  # ── Local test mail server (optional): `--profile testmail` (docs/ARCHITECTURE.md §11) ─
   # GreenMail (SMTP + IMAP, in memory) + Roundcube (webmail) + Finn's own worker / poller for
   # it, so test mail never touches the real mailbox or the real worker: own env file (only test
   # passwords), own task queue `finn-testmail`, own runs folder, own image tag. Start without

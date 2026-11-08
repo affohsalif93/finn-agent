@@ -1,4 +1,4 @@
-"""Pseudonymisation before the intent call (§8.1, D21)."""
+"""Pseudonymisation before the intent call (D21)."""
 
 import re
 

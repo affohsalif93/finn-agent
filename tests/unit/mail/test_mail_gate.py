@@ -1,4 +1,4 @@
-"""Gate (§6.1): loops, recipient, DMARC, sender rules with precedence."""
+"""Gate: loops, recipient, DMARC, sender rules with precedence."""
 
 from pathlib import Path
 
