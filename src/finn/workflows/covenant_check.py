@@ -1,12 +1,6 @@
-"""CovenantCheckWorkflow (ARCHITECTURE §7.1): one mail → one reply, waiting for input if needed.
-
-Workflow ID = Message-ID of the mail that started it (dedup, §6.1 rule 2). The poller signals
-`new_message` when a mail in the same thread arrives while the workflow waits. Every round
-recomputes from scratch on the whole thread (D8). Each reply has a deterministic Message-ID
-(workflow ID + sequence + kind), so `send_reply` is idempotent (§7.3).
-
-Workflow code does no I/O: everything runs in activities; time comes from Temporal.
-"""
+"""CovenantCheckWorkflow (D8, D9): one mail → one reply, waiting for input if needed; ID = the
+Message-ID. Each round recomputes from the whole thread; deterministic reply Message-IDs make
+`send_reply` idempotent. No I/O here: everything runs in activities."""
 
 from datetime import timedelta
 

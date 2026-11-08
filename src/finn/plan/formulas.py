@@ -1,10 +1,5 @@
-"""Cell values, with a small evaluator for simple formulas (D22 level 2).
-
-`openpyxl` cannot evaluate formulas and files saved by it carry no cached results. Sub-totals in
-plans are simple (`=SUM(D5:D9)`, `=D8+D13+D14`, `=-GuV!D13`), so we recompute those from the
-input cells: numbers, cell / range references (also on other sheets), `+ - * /`, parentheses,
-`SUM`. Anything else (other functions, external links) is reported as unsupported.
-"""
+"""Cell values, with a small evaluator for simple formulas (D22): files saved by openpyxl have no
+cached results, so sub-totals (refs, ranges, `+ - * /`, `SUM`) are recomputed; else unsupported."""
 
 import re
 from collections.abc import Iterator

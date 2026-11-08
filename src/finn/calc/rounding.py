@@ -1,8 +1,6 @@
-"""Contract rounding, comparison, headroom and the tight flag (ARCHITECTURE §5.1, D24).
+"""Contract rounding, comparison, headroom and the tight flag (D24).
 
-One place for the rules: ROUND_HALF_UP ("kaufmännisch"), the **rounded** value is compared,
-no rounding rule in the contract → 2 decimals (flagged by the engine, CALC_NO_ROUNDING_RULE).
-"""
+ROUND_HALF_UP ("kaufmännisch"); the **rounded** value is compared; no rule → 2 decimals."""
 
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Literal

@@ -1,18 +1,5 @@
-"""Report → German reply mail (ARCHITECTURE §6.4): code builds the mail, the LLM only polishes.
-
-1. Code fills Jinja2 templates (`templates/`) from the `Report`. Result mail, in this order:
-   greeting + "die Covenant-Prüfung … ist abgeschlossen", lead box (overall result, tightest
-   covenant with headroom, sensitivity, early-warning note), compact table with a status dot
-   and footnote marks, footnotes (contract sources, plan file), Hinweise (input notes and
-   contract notes, condensed), links to the calculation paths, one path per covenant
-   (`paths.py`), the shared EBITDA derivation, signature. This alone is a complete mail.
-2. Optional polish (D21): the LLM rewrites only the lead sentences and the Hinweise, which it
-   sees with every number and name replaced by a placeholder (`{{N3}}`, `{{NAME2}}`).
-3. Placeholder check + number check (`number_check.py`); any doubt → the template text.
-
-Variants in the same visual style: result (incl. PARTIAL), ask, block, other (off-topic /
-question), error: greeting, one-line lead box, what exactly is wrong, "So geht es weiter".
-"""
+"""Report → German reply mail: code fills the Jinja2 templates (result, ask, block, other, error);
+the optional LLM polish (`polish.py`) only rewrites lead sentences and notes (D21)."""
 
 import hashlib
 import re

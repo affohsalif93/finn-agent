@@ -1,15 +1,6 @@
-"""Onboarding validation of a (draft) profile against the contract text (ARCHITECTURE §2.1, D4).
-
-- every `sources[]` quote exists **verbatim** on its stated page (whitespace normalised; typographic
-  quotes and dashes unified). Near misses are reported with the page where the text was found
-  (`wrong_page`) or as `punctuation` when only punctuation / case differ;
-- recipe whitelist and structure (`calc/recipe.py`, the same check the store runs at load time);
-- thresholds parse: every threshold value appears as a number in the covenant's source quote;
-- page numbers within the document, the contract's printed examples reproduce (selftest).
-
-`repair_quotes` turns near misses into exact quotes (page corrected, text copied from the page),
-so a draft never carries a quote that is not in the contract.
-"""
+"""Onboarding validation of a draft profile against the contract text (D4): verbatim quotes on
+their page, recipe whitelist, thresholds in the quotes, page numbers, printed examples;
+`repair_quotes` turns near misses into exact quotes."""
 
 import re
 from dataclasses import dataclass, field

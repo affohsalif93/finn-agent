@@ -1,22 +1,6 @@
-"""Deterministic completeness scan (D4, ARCHITECTURE §2.1): covenant signal words in the contract
-text must all be accounted for by the profile.
-
-The page texts are split into clauses (sentences, list items). A clause is a **hit** if it names a
-financial ratio (Eigenkapitalquote, Verschuldungsgrad, DSCR / Schuldendienstdeckungsgrad, EBITDA,
-Finanzkennzahl, Covenant, …) or states a bound on a percentage / ratio ("mindestens",
-"nicht mehr als", "nicht weniger als", "höchstens" … + number).
-
-A hit is **covered** when
-1. it overlaps a quoted source of the profile on the same page (covenant, definition, condition,
-   pricing grid, example, dismissed mention, no-covenant reason: every source is cited by one of
-   them), or
-2. it only refers back to what the profile already knows: every term it names is a covenant /
-   definition of the profile, and every number it states is a threshold or a number quoted in a
-   source (e.g. the compliance-certificate template "Eigenkapitalquote (Grenzwert: mind. 30,0 %)").
-
-An uncovered hit is a finding: the extraction may have missed a covenant or a modifying clause,
-or a numeric mention that should be dismissed with a reason.
-"""
+"""Completeness scan (D4): every clause in the contract that names a financial ratio or bounds a
+percentage must be covered by the profile (overlaps a quoted source, or only refers back to known
+covenants / quoted numbers); an uncovered hit is a finding."""
 
 import re
 from dataclasses import dataclass

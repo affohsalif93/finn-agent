@@ -1,1 +1,1 @@
-"""Recipes -> results: evaluator, rounding, sensitivity, engine (ARCHITECTURE §5)."""
+"""Recipes → results: evaluator, rounding, sensitivity, engine."""

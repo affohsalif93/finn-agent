@@ -1,15 +1,5 @@
-"""Calculation path per covenant for the reply (ARCHITECTURE §6.4, D14), built from the trace.
-
-Four steps per covenant: source in the contract (covenant clause + main definition only; the full
-list stays in `results.json`), formula in words (definition names), input values (short labels,
-T€, cell; sub-totals), result (with the contract's rounding wording); plus "Besonderheit":
-excluded components and items set to 0, with reason, evidence and a short verbatim contract
-quote. The alternative value is shown only when it changes the outcome (met / tight / breached).
-EBITDA is derived once in a shared block that the covenants refer to.
-
-Pure functions on `CovenantResult`; every number shown comes from the report (or, for the
-"with the excluded component" alternative, from the same numbers with contract rounding).
-"""
+"""Calculation path per covenant for the reply (D14), built from the trace: source, formula in
+words, input values, result, "Besonderheit". Every number shown comes from the report."""
 
 import re
 from collections.abc import Sequence

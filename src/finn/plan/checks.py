@@ -1,8 +1,4 @@
-"""Tie-outs and plausibility checks on a read plan -> Findings (ARCHITECTURE §4.4, D7, D22).
-
-Checks that need the request or the contract profiles take the expected values as parameters;
-the pipeline wires them once those exist.
-"""
+"""Tie-outs and plausibility checks on a read plan → findings (D7, D22)."""
 
 import re
 from collections.abc import Collection, Mapping, Sequence

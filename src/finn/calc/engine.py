@@ -1,9 +1,6 @@
-"""All contract profiles × one plan → `Report` (ARCHITECTURE §6.4). Pure code, no LLM, no I/O.
-
-Order per covenant: blocking / partial plan findings on a used building block → not_computable;
-invalid or unmapped recipe → manual_review; otherwise evaluate, round, compare, headroom, tight
-flag, sensitivity, alternatives for unclear plan facts.
-"""
+"""All contract profiles × one plan → `Report`; pure code, no LLM, no I/O (D1). Per covenant:
+stopping plan findings → not_computable; invalid or unmapped recipe → manual_review; otherwise
+evaluate, round, compare, headroom, tight flag, sensitivity, alternatives."""
 
 import hashlib
 from collections.abc import Collection, Sequence

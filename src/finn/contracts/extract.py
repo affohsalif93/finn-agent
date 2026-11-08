@@ -1,15 +1,6 @@
-"""Contract onboarding (ARCHITECTURE §2.1, D2–D4): PDF → LLM extraction → draft profile.
-
-One call per contract with the **full** page-tagged text (no RAG, D3) and the `ProfileDraft`
-schema; code fills what it knows (contract id, file, sha256, pages, extraction metadata) and sets
-`review.status = "draft"`. If the draft does not convert into a valid ContractProfile, the
-errors are sent back once for a corrected answer. Near-miss quotes are repaired from the page
-text (`validate.repair_quotes`). A second call reviews the draft against the full text; its
-issues are stored next to the profile as `<id>.review.json`, together with the deterministic
-validation and completeness results.
-
-Re-extraction only when the PDF hash or the prompt version changed (or `force`).
-"""
+"""Contract onboarding (D2–D4): PDF → one LLM extraction on the full text → draft profile, one
+correction round, quote repair, a second review call; re-extraction only when the PDF hash or the
+prompt version changes."""
 
 import datetime as dt
 import hashlib

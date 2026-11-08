@@ -1,10 +1,6 @@
-"""Recipe evaluator (ARCHITECTURE §5.1, D5, D23): weighted sums, one division, nothing else.
+"""Recipe evaluator (D5, D23): weighted sums, one division, nothing else.
 
-Pure: profile + building blocks + plan facts in, a full component trace out. `ref` components
-resolve to the contract's **own** definitions (recursively); conditions are decided by plan
-facts; `if_missing` and `loan_filters` apply per component. Recipes are assumed structurally
-valid (`finn.calc.recipe.recipe_issues` is empty for the covenant).
-"""
+Profile + building blocks + plan facts in, a full component trace out; recipes are assumed valid."""
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field

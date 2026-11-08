@@ -1,8 +1,6 @@
 """Exact decimals and German number formatting, in one place (D24).
 
-Floats from Excel go through `Decimal(str(x))`, never `Decimal(x)`. Rounding for covenants is
-the calc engine's job; `format_de` only formats a value with a given number of decimals.
-"""
+Floats from Excel go through `Decimal(str(x))`, never `Decimal(x)`."""
 
 import re
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation

@@ -1,8 +1,5 @@
-"""Calculation results (ARCHITECTURE §2.3, §6.4). No logic.
-
-The component trace (`Used` / `Excluded` / `AssumedZero`, nested for definition refs) is the
-calculation path shown in the reply; `formula_de` is generated from the same trace.
-"""
+"""Calculation results. The component trace (`Used` / `Excluded` / `AssumedZero`) is the
+calculation path shown in the reply; `formula_de` is generated from the same trace."""
 
 import datetime as dt
 from decimal import Decimal

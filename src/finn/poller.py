@@ -1,14 +1,6 @@
-"""Poller (ARCHITECTURE §6.1, §7.4, D20): a plain, stateless loop outside Temporal.
-
-every POLL_INTERVAL_SECONDS:
-  fetch new mail from IMAP_FOLDER only → gate (headers) → save raw .eml to the run folder →
-  signal the thread's waiting workflow, or start CovenantCheckWorkflow(id = Message-ID) →
-  mark processed only after the start / signal succeeded.
-
-Robustness: a mail is never lost (marked only after the start), never processed twice
-(Temporal rejects a second workflow with the same ID), outages back off and the next cycle is
-the retry (the mail stays in the folder), auth failures are loud (CRITICAL log, long pause).
-"""
+"""Poller (D20): a stateless loop outside Temporal. Fetch → gate → save .eml → signal the waiting
+workflow or start one (ID = Message-ID) → mark processed only after that, so mail is never lost
+or processed twice; outages back off, auth failures are loud."""
 
 import asyncio
 import contextlib

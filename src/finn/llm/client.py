@@ -1,16 +1,6 @@
-"""OpenAI client: one structured-output call with timeouts, retries and a clear failure type.
+"""OpenAI client: one structured-output call; every failure ends in `LLMUnavailable` (D16).
 
-`complete_structured` sends `system` + `user` to the Responses API with the pydantic `schema` as a
-strict JSON schema and returns the parsed object. Retries with exponential backoff (connection
-errors, timeouts, 408/409/429/5xx) are done by the SDK (`max_retries`); everything that still
-fails, a missing API key, a refusal, a truncated answer or an answer that fails validation ends
-in `LLMUnavailable`, so callers have exactly one exception to handle (template fallback, D16).
-
-Every call is logged in the run folder (`llm_calls.jsonl`, written by the pipeline) and the
-structured log; `purpose`, `trace_id` (= workflow ID) and `session_id` (= mail thread) label the
-log lines (D13). This log never holds prompts (they may hold contract text); only sizes, model
-and token usage.
-"""
+Logs purpose, model, trace / session id and token usage, never prompts (D13)."""
 
 import re
 import time

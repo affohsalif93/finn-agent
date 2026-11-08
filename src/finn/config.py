@@ -8,7 +8,7 @@ from typing import Literal
 from pydantic import SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Default OpenAI model (ARCHITECTURE §8.2): balanced GPT-6.1 tier, structured outputs, 1M context.
+# Default OpenAI model: balanced GPT-6.1 tier, structured outputs, 1M context.
 DEFAULT_OPENAI_MODEL = "gpt-6.1-sol"
 
 
@@ -24,15 +24,15 @@ class Settings(BaseSettings):
     log_format: Literal["console", "json"] = "console"
     contracts_dir: Path = Path("material")
     profiles_dir: Path = Path("data/contract_profiles")
-    # Headroom below this share of the threshold is flagged as "tight" (ARCHITECTURE §5.1).
+    # Headroom below this share of the threshold is flagged as "tight".
     tight_headroom_ratio: Decimal = Decimal("0.10")
-    # LLM (ARCHITECTURE §8). An empty `OPENAI_API_KEY=` means "no key"; an empty
+    # LLM. An empty `OPENAI_API_KEY=` means "no key"; an empty
     # `OPENAI_MODEL=` falls back to the default.
     openai_api_key: SecretStr | None = None
     openai_model: str = DEFAULT_OPENAI_MODEL
     openai_timeout_seconds: float = 300
     openai_max_retries: int = 3
-    # Mailbox (ARCHITECTURE §6.1, §11). Finn reads ONLY `imap_folder`; processed mail is moved to
+    # Mailbox. Finn reads ONLY `imap_folder`; processed mail is moved to
     # `imap_processed_folder` (default "<imap_folder>/Verarbeitet", a nested Gmail label).
     imap_host: str = "imap.gmail.com"
     imap_port: int = 993
@@ -55,7 +55,7 @@ class Settings(BaseSettings):
     smtp_user: str = ""
     smtp_password: SecretStr | None = None
     smtp_from_name: str = "Finn (Covenant-Prüfung)"
-    # Gate (§6.1): Finn's receiving address (may be a plus alias of `imap_user`), sender rules.
+    # Gate (D12): Finn's receiving address (may be a plus alias of `imap_user`), sender rules.
     finn_address: str = ""
     allowed_senders: str = "*"
     require_dmarc_pass: bool = False
@@ -64,7 +64,7 @@ class Settings(BaseSettings):
     max_mail_mb: float = 25
     # Waiting for a follow-up mail (thread case B, FAILURES §J).
     wait_for_input_days: float = 7
-    # Reply (§6.4): let the LLM rephrase summary + notes (placeholders only, D21); off → template.
+    # Reply: let the LLM rephrase summary + notes (placeholders only, D21); off → template.
     reply_llm_polish: bool = True
     # TEST ONLY (live mail tests / `finn demo`): a deterministic stand-in replaces every LLM
     # call (`llm/fake.py`). Never set in production; the worker logs a warning when it is on.

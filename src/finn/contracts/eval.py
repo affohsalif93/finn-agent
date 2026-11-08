@@ -1,16 +1,5 @@
-"""Extraction eval: an extracted profile against the hand-written gold profile (ARCHITECTURE §12).
-
-Semantic, not textual: covenants are matched by `metric_type`; recipes are compared after
-**flattening** numerator and denominator into weighted building blocks with their conditions
-(by plan fact), so definition ids, source ids and the nesting of definitions may differ as long as
-the computation is the same. On top, each gold definition is compared component by component with
-the extracted definition of the same term, and the clauses around the formula (operator,
-threshold, unit, rounding, plan check, breach, cure), dismissed-mention categories, conditions,
-pricing grid and examples.
-
-`answer_key_checks` runs the calc engine with the extracted profiles on the sample plan: the
-results must reproduce the answer key (SCOPE.md §3) and the V3 contract example (1.54).
-"""
+"""Extraction eval: extracted vs. gold profiles, compared semantically (recipes flattened into
+weighted building blocks); `answer_key_checks` reruns the answer key with the extracted profiles."""
 
 from collections.abc import Sequence
 from dataclasses import dataclass, field
@@ -19,7 +8,7 @@ from pathlib import Path
 
 from finn.models.contract import Component, ContractProfile, Covenant, Definition
 
-# Answer key (SCOPE.md §3) per (contract, metric type); V1 has no covenants.
+# Answer key (SCOPE.md) per (contract, metric type); V1 has no covenants.
 ANSWER_KEY: dict[tuple[str, str], Decimal] = {
     ("V2", "economic_equity_ratio"): Decimal("34.32"),
     ("V3", "dscr"): Decimal("1.56"),

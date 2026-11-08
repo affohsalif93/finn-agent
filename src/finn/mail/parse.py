@@ -1,9 +1,6 @@
 """`.eml` → `InboundMessage` (headers, for the gate) and → body + attachments (for the workflow).
 
-Stdlib `email` with `policy.default`, defensive: a broken part never stops the others, sizes are
-limited, the raw `.eml` is always kept (§6.1 rule 6). Attachment kinds are detected by extension
-**and** magic bytes (a renamed `.xlsx` is still found, a `.pdf` named `.xlsx` is not trusted).
-"""
+Defensive: a broken part never stops the others; kinds by extension **and** magic bytes."""
 
 import hashlib
 import html

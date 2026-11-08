@@ -1,9 +1,5 @@
-"""`formula_de` from the component trace (ARCHITECTURE §2.3): what is shown = what was computed.
-
-Rules: excluded and assumed-zero components are left out (they are listed separately); a
-definition ref is expanded into its terms when it has at most `EXPAND_MAX` non-zero terms,
-otherwise it stays one named sub-total with its own sub-formula ("EBITDA = … = 40.200").
-"""
+"""`formula_de` from the component trace: what is shown = what was computed. A definition ref is
+expanded when it has at most `EXPAND_MAX` non-zero terms, else it stays a named sub-total."""
 
 from collections.abc import Sequence
 from dataclasses import dataclass

@@ -1,7 +1,4 @@
-"""Plan data contracts (ARCHITECTURE §2.3, §4.1). No logic.
-
-All amounts are `Decimal` in T€ after unit and sign normalisation; JSON serialises them as strings.
-"""
+"""Plan data contracts. All amounts are `Decimal` in T€ after unit and sign normalisation."""
 
 from datetime import date
 from decimal import Decimal

@@ -1,10 +1,6 @@
-"""Rounding-aware break points (ARCHITECTURE §5.1, D15).
-
-How far may the driver (EBITDA or equity) fall, everything else unchanged, before the **rounded**
-covenant value breaks the threshold? The recipe is linear in each building block, so the
-covenant value after a drop d is (n0 + a·d) / (m0 + b·d) (× 100 for percent): solve for the
-rounding boundary algebraically, then verify and adjust to whole T€ with the real evaluator.
-"""
+"""Rounding-aware break points (D15): how far may EBITDA or equity fall before the rounded
+covenant value breaks? Solved algebraically ((n0 + a·d) / (m0 + b·d) is linear per block), then
+verified in whole T€ with the real evaluator."""
 
 from collections.abc import Callable, Sequence
 from dataclasses import replace

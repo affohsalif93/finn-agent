@@ -1,8 +1,6 @@
-"""Whitelist and structure checks for recipes, and their dependencies (ARCHITECTURE §3.3, D23).
+"""Whitelist and structure checks for recipes, and their dependencies (D5, D23).
 
-Pure functions over a `ContractProfile`. The store runs `recipe_issues` at load time; a covenant
-with an issue is reported as `manual_review` (PROFILE_INVALID_RECIPE), never guessed.
-"""
+A covenant with an issue becomes `manual_review` (PROFILE_INVALID_RECIPE), never guessed."""
 
 from collections.abc import Iterator
 from dataclasses import dataclass

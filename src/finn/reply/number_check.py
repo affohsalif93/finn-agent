@@ -1,9 +1,6 @@
-"""Number check (ARCHITECTURE §6.4 step 3, D21): every number in a text must come from the Report.
+"""Number check (D21): every number in a polished text must come from the template text.
 
-The allowed numbers are taken from texts that code generated from the `Report` (the template
-mail); a polished text may only re-use them. Numbers glued to letters (cells such as `D28`,
-contract ids such as `V4`) are not counted on either side.
-"""
+Numbers glued to letters (cells such as `D28`, ids such as `V4`) are not counted."""
 
 import re
 from collections.abc import Iterable

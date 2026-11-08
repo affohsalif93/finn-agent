@@ -1,12 +1,5 @@
-"""Gate (ARCHITECTURE §6.1, D12, D20): who may enter. A plain function, headers only.
-
-`check(msg, settings) -> Accept | Reject`. Rejected mail is a security event in the log
-(`access_rejected`, `auth_failed`, `loop_ignored`): no reply, attachments never parsed, no workflow.
-
-Sender rules (`ALLOWED_SENDERS`, comma-separated): `*` (anyone, demo mode) · `cfo@x.de` (exact) ·
-`@x.de` (domain) · `@*.x.de` (any subdomain of x.de, not x.de itself) · `!rule` (deny).
-Precedence: exact deny → exact allow → most specific matching pattern (a deny wins a tie) → reject.
-"""
+"""Gate (D12, D20): who may enter, from headers only. Rejected mail is a security event in the log:
+no reply, no parsing, no workflow. Sender rule syntax and precedence: `sender_allowed`."""
 
 import re
 from dataclasses import dataclass, field
@@ -71,6 +64,8 @@ class Rule:
 
 
 def parse_rules(text: str) -> list[Rule]:
+    """ALLOWED_SENDERS, comma-separated: `*` (anyone) · `cfo@x.de` (exact) · `@x.de` (domain) ·
+    `@*.x.de` (subdomains, not x.de itself) · `!rule` (deny)."""
     rules: list[Rule] = []
     for raw in (text or "").split(","):
         token = raw.strip().lower()
@@ -92,6 +87,7 @@ def parse_rules(text: str) -> list[Rule]:
 
 
 def sender_allowed(addr: str, rules: list[Rule]) -> bool:
+    """Exact deny → exact allow → most specific matching pattern (a deny wins a tie) → reject."""
     addr = addr.strip().lower()
     exact = [r for r in rules if r.kind == "exact" and r.matches(addr)]
     if any(r.deny for r in exact):
@@ -153,7 +149,7 @@ def loop_reason(msg: InboundMessage, settings: Settings) -> str | None:
 
 
 def check(msg: InboundMessage, settings: Settings) -> Accept | Reject:
-    """Steps (§6.1): tenant · licence · loop · recipient · DMARC · sender rules."""
+    """Steps: tenant · licence · loop · recipient · DMARC · sender rules."""
     auth = parse_auth(msg.auth_results)
     tenant = _tenant(msg, settings)  # 1. tenant by receiving mailbox (stub: one tenant)
     if not _licence_active(tenant):  # 2. licence (stub: always active)

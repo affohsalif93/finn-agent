@@ -1,14 +1,5 @@
-"""TEST ONLY: a deterministic stand-in for `client.complete_structured` (`FINN_LLM_FAKE=1`).
-
-Used by the live mail tests and `finn demo` against the local test mail server (compose profile
-`testmail`), so a run is reproducible and needs no API key. It never runs unless the setting is
-on; production leaves it off (the default) and `complete_structured` logs a warning when it is.
-
-- `intent`: keyword rules on the pseudonymised thread (as the LLM sees it): a workbook or
-  covenant words → `covenant_check`, else `other`; the plan year from the thread text.
-- `reply_polish`: echoes the paragraphs unchanged (placeholders intact → number check passes).
-- anything else (contract extraction): `LLMUnavailable`.
-"""
+"""TEST ONLY: deterministic stand-in for `client.complete_structured` (`FINN_LLM_FAKE=1`), used by
+the live mail tests and `finn demo`: keyword intent, polish echoes the text, extraction fails."""
 
 import re
 

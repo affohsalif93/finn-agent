@@ -1,8 +1,5 @@
-"""Step 1 of the plan reader (D6): deterministic mapping by row label x plan-year column.
-
-`read_plan(path)` is pure: file in, models out, no network. Values are normalised to T€ and to
-positive magnitudes for expenses / liabilities; every value keeps its cell reference.
-"""
+"""Plan reader (D6): deterministic mapping by row label × plan-year column. Pure: file in, models
+out; values in T€ as positive magnitudes, each with its cell reference."""
 
 import re
 from dataclasses import dataclass, field

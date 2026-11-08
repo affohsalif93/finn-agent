@@ -1,8 +1,5 @@
-"""Mail connector interface (ARCHITECTURE §6.1, D11, D19): one implementation per provider.
-
-Case study: `ImapSmtpConnector` (`mail/imap_smtp.py`). Tests: an in-memory fake with the same
-protocol. `build_mime` turns a `ReplyDraft` into the MIME message every connector sends.
-"""
+"""Mail connector interface (D11, D19): one implementation per provider; `build_mime` turns a
+`ReplyDraft` into the MIME message every connector sends."""
 
 from datetime import datetime
 from email.headerregistry import Address

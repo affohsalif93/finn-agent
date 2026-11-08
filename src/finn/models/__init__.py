@@ -1,4 +1,4 @@
-"""Data contracts (ARCHITECTURE §2.3). Pydantic models only, no logic."""
+"""Data contracts. Pydantic models only, no logic."""
 
 from finn.models.plan import (
     CellRef,

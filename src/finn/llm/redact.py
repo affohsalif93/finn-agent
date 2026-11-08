@@ -1,12 +1,5 @@
-"""Data minimisation before an LLM call (ARCHITECTURE §8.1, D21).
-
-- `clean_body`: strip quoted history, signatures and mobile footers from a mail body.
-- `Pseudonyms`: replace emails, phone numbers, IBANs and given person names with placeholders
-  (`[EMAIL_1]`, `[PHONE_1]`, `[IBAN_1]`, `[PERSON_1]`). The same
-  original always gets the same placeholder; the mapping stays local (run folder
-  `pseudonyms.json`), never in a prompt.
-- `Masker`: numbers and names in reply text → `{{N1}}` / `{{NAME1}}` for the polish call.
-"""
+"""Data minimisation before an LLM call (D21): `clean_body`, `Pseudonyms` (emails, phones, IBANs,
+names → `[EMAIL_1]` …; the mapping stays in the run folder) and `Masker` for the reply polish."""
 
 import re
 from collections.abc import Iterable, Sequence

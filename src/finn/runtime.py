@@ -39,7 +39,7 @@ async def connect(settings: Settings, stop: asyncio.Event | None = None) -> Clie
     delay = 1.0
     while not stop.is_set():
         try:
-            # Pydantic models as payloads (Decimals as strings, §7.2)
+            # Pydantic models as payloads (Decimals as strings)
             client = await Client.connect(**config, data_converter=pydantic_data_converter)
         except (RuntimeError, RPCError) as exc:  # connect failures surface as RuntimeError
             log.warning(

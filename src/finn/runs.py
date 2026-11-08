@@ -1,10 +1,4 @@
-"""Run folder (ARCHITECTURE §9): the audit trail of one mail, `runs/<ts>_<msgid-hash>/`.
-
-Files: `incoming.eml`, `attachments/`, `pseudonyms.json`, `request.json`, `plan_inputs.json`,
-`checks.json`, `results.json`, `reply.html` / `reply.txt` (latest; every sent reply also as
-`reply-<n>-<kind>.*`), `sent/<hash>.json` (send markers), `llm_calls.jsonl` (pseudonymised
-prompts only), `log.txt`, `error.txt`. `runs/` is git-ignored (mail content).
-"""
+"""Run folder `runs/<ts>_<msgid-hash>/`: the audit trail of one mail (D13); git-ignored."""
 
 import hashlib
 import json

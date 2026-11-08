@@ -1,8 +1,5 @@
-"""Plan facts by pattern rules on note texts (ARCHITECTURE §4.1). Code decides, never the LLM.
-
-Unclear facts are set to the conservative value (`False`: shareholder loan counts as debt, cash
-is not netted) with `ambiguous=True` and a `PLAN_FACT_AMBIGUOUS` warning.
-"""
+"""Plan facts by pattern rules on note texts; code decides, never the LLM. Unclear facts get the
+conservative value with `ambiguous=True` and a PLAN_FACT_AMBIGUOUS warning."""
 
 import re
 from collections.abc import Sequence

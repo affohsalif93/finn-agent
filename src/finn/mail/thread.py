@@ -1,7 +1,6 @@
-"""Thread identity (ARCHITECTURE §6.3): `In-Reply-To` / `References`, subject as fallback.
+"""Thread identity: `In-Reply-To` / `References`, subject as fallback.
 
-Message IDs are handled without angle brackets (see `models/mail.py`).
-"""
+Message IDs are handled without angle brackets (see `models/mail.py`)."""
 
 import hashlib
 import re
@@ -52,7 +51,7 @@ def thread_id(msg: InboundMessage) -> str:
 
 def candidate_ids(msg: InboundMessage) -> list[str]:
     """Message IDs this mail refers to, nearest first (In-Reply-To, then References backwards).
-    A waiting workflow has the ID of the mail that started it (§7.1)."""
+    A waiting workflow has the ID of the mail that started it."""
     out: list[str] = []
     for mid in [msg.in_reply_to, *reversed(msg.references)]:
         if mid and mid not in out and mid != msg.message_id:

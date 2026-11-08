@@ -1,13 +1,6 @@
-"""Contract profile schema v2 (ARCHITECTURE §3). Reviewed JSON, one file per contract.
-
-Amounts are exact decimals (JSON strings): contract amounts in EUR, plan values in T€.
-The model validates types and the profile-wide invariants; the recipe structure (refs resolve,
-no cycles, conditions exist) is checked per covenant by `finn.calc.recipe`, so one bad recipe
-makes only that covenant `manual_review` instead of rejecting the whole contract.
-
-Validation errors that the store maps to an error code carry the code as a message prefix
-("PROFILE_INVARIANT: …", "PROFILE_INVALID_RECIPE: …").
-"""
+"""Contract profile schema v2 (D28): reviewed JSON, one file per contract, exact decimals. Recipe
+structure is checked per covenant by `finn.calc.recipe`; invariant errors carry their error code
+as a message prefix ("PROFILE_INVARIANT: …")."""
 
 import datetime as dt
 from collections.abc import Iterator

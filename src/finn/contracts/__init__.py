@@ -1,1 +1,1 @@
-"""Contract onboarding and loading: reviewed profiles (ARCHITECTURE §3, D2)."""
+"""Contract onboarding and loading: reviewed profiles (D2)."""

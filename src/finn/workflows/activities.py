@@ -1,10 +1,5 @@
-"""Activities (ARCHITECTURE §7.3): thin wrappers, each calls one `pipeline` step.
-
-Sync activities (file I/O, openpyxl, imaplib, the OpenAI SDK) run in the worker's thread pool.
-Dependencies are injected (`FinnActivities(settings, connector_factory)`) so tests use a fake
-mailbox. Input errors (validation) are non-retryable application errors; everything else follows
-the retry policy the workflow sets per activity.
-"""
+"""Activities: thin wrappers, each calls one `pipeline` step; sync, in the worker's thread pool.
+Validation errors are non-retryable; everything else follows the workflow's retry policy."""
 
 from collections.abc import Callable
 

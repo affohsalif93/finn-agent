@@ -1,8 +1,6 @@
-"""Every step of a mail run as a plain function (ARCHITECTURE §12, D27).
-
-The direct runner (`process_eml`, CLI `finn process`) and the Temporal activities call the same
-functions; Temporal adds durability, not logic. Steps write their audit files to the run folder.
-"""
+"""Every step of a mail run as a plain function (D27). The direct runner (`finn process`) and
+the Temporal activities call the same functions; each step writes its audit files to the run
+folder."""
 
 import traceback
 from dataclasses import dataclass, field
@@ -166,7 +164,7 @@ def classify_intent(inp: ClassifyInput, settings: Settings) -> Classified:
 
 
 def load_and_validate_plan(inp: PlanInput) -> PlanReadResult:
-    """Plan reader + checks (§4.4) + plan year vs. request (PLAN_YEAR_MISMATCH)."""
+    """Plan reader + checks + plan year vs. request (PLAN_YEAR_MISMATCH)."""
     result = read_plan(Path(inp.attachment.path))
     plan = result.plan
     if plan is not None and (mismatch := check_plan_year(plan, inp.request.plan_year)):
@@ -246,7 +244,7 @@ def render_reply(inp: RenderInput, settings: Settings) -> ReplyDraft:
 
 
 def send_reply(inp: SendInput, connector: MailConnector) -> SentRecord:
-    """Idempotent (§7.3): local sent marker → Sent folder (`was_sent`) → send → marker."""
+    """Idempotent: local sent marker → Sent folder (`was_sent`) → send → marker."""
     draft = inp.draft
     marker = runs.sent_marker(inp.run_dir, draft.message_id)
     if marker.is_file():
@@ -271,7 +269,7 @@ def record_failure(inp: FailureInput) -> None:
     runs.log_line(inp.run_dir, "error", inp.error.splitlines()[0] if inp.error else "Fehler")
 
 
-# ── direct runner (§7.5) ─────────────────────────────────────────────────────
+# ── direct runner ────────────────────────────────────────────────────────────
 
 
 @dataclass

@@ -1,7 +1,5 @@
-"""Inputs / outputs of the pipeline steps = Temporal activity payloads (ARCHITECTURE §2.3, §7).
-
-Paths, never file contents (§7.2). Decimals serialise as strings (pydantic data converter).
-"""
+"""Inputs / outputs of the pipeline steps = Temporal activity payloads (paths, never file
+contents; decimals serialise as strings)."""
 
 from typing import Literal
 

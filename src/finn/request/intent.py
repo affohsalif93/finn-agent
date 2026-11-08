@@ -1,10 +1,5 @@
-"""Intent (ARCHITECTURE §6.2): the LLM classifies the pseudonymised thread, code decides.
-
-- `classify`: one structured LLM call (`IntentAnswer`); `LLMUnavailable` → `rule_fallback`
-  (`.xlsx` attached and/or covenant keywords → covenant_check).
-- `check_input`: the intent's input contract (FAILURES "Intent input contracts"): exactly one
-  plan file in the thread, the latest message with a workbook wins; anything missing → ASK.
-"""
+"""Intent: the LLM classifies the pseudonymised thread, code decides; `rule_fallback` without the
+LLM. `check_input`: exactly one plan file in the thread (the latest wins); anything else → ASK."""
 
 import re
 from collections.abc import Sequence

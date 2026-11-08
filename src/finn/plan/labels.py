@@ -1,9 +1,6 @@
 """Label knowledge: synonyms per building block, plan-year headers, statement detection.
 
-Matching is on normalised text (case, umlauts, punctuation, enumerations and parentheticals
-removed). Score: exact 3 > starts with 2 > contains 1; `excludes` are whole words / phrases
-that disqualify a label (e.g. "Ergebnis vor Ertragsteuern" is not `income_taxes`).
-"""
+Normalised matching; score exact 3 > starts with 2 > contains 1; `excludes` disqualify a label."""
 
 import re
 from dataclasses import dataclass, field

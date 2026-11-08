@@ -1,8 +1,5 @@
-"""Open a workbook safely; units per sheet; hidden sheets and rows.
-
-The file is loaded twice: `data_only=False` gives inputs and formula text, `data_only=True` the
-values Excel cached when the file was last saved (missing after a save by openpyxl).
-"""
+"""Open a workbook safely; units per sheet; hidden sheets and rows. Loaded twice: formulas
+(`data_only=False`) and the values Excel cached on its last save (`data_only=True`)."""
 
 import hashlib
 import io

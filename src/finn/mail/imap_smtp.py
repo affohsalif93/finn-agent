@@ -1,23 +1,6 @@
 """`ImapSmtpConnector`: IMAP for reading, SMTP for sending (stdlib `imaplib` / `smtplib`).
 
-Gmail specifics (verified Nov 2026), handled generically where possible:
-- Finn reads **only** `IMAP_FOLDER` (a Gmail label filled by a filter on the plus alias); never
-  INBOX. A missing folder raises `FolderMissingError` (poller: log, retry next cycle).
-- Processed = **moved** to `IMAP_PROCESSED_FOLDER` (default `<folder>/Verarbeitet`, created on
-  first use) with `UID MOVE` (RFC 6851; COPY + \\Deleted + EXPUNGE without MOVE). On Gmail this
-  swaps the label; the mail stays in "All Mail". Custom IMAP keywords are not reliable on Gmail,
-  folders are, and the state stays visible to a human in the web UI.
-- The Sent folder is found by its `\\Sent` SPECIAL-USE flag (the name is localised), else by
-  `IMAP_SENT_FOLDER` or a common name; `was_sent` searches it by Message-ID (`X-GM-RAW
-  rfc822msgid:` on Gmail, `HEADER Message-ID` elsewhere).
-- Gmail's SMTP files every sent mail in "Gesendet" itself; other servers (GreenMail, many
-  hosters) don't, so Finn APPENDs its reply there (`IMAP_APPEND_SENT`, auto = not on Gmail);
-  otherwise `was_sent` could never find it.
-- Transport: IMAPS and SMTPS / STARTTLS by default; `IMAP_SSL=false` / `SMTP_SECURITY=plain`
-  only for the local test server (compose profile `testmail`).
-- Bodies are fetched with `BODY.PEEK[]` (no \\Seen flag); mails above the size limit only with
-  their header (MAIL_TOO_LARGE).
-"""
+Works with Gmail and plain IMAP servers; provider specifics are documented at the methods."""
 
 import contextlib
 import imaplib
@@ -185,6 +168,9 @@ class ImapSmtpConnector:
     # ── MailConnector ───────────────────────────────────────────────────────
 
     def fetch_new(self, since: datetime) -> list[InboundMessage]:
+        r"""New mail in `IMAP_FOLDER` only (on Gmail a label filled by a filter on the plus alias;
+        never INBOX). Bodies via `BODY.PEEK[]` (no \Seen flag); mail above the size limit only
+        with its header (MAIL_TOO_LARGE). A missing folder raises `FolderMissingError`."""
         limit = int(self.s.max_mail_mb * 1024 * 1024)
         with self._errors("fetch_new"):
             validity = self._select(self.s.imap_folder)
@@ -225,6 +211,9 @@ class ImapSmtpConnector:
         )
 
     def mark_processed(self, msg: InboundMessage) -> None:
+        r"""Move to `IMAP_PROCESSED_FOLDER` (created on first use) with `UID MOVE` (RFC 6851;
+        COPY + \Deleted + EXPUNGE without it). On Gmail this swaps the label and the mail stays
+        in "All Mail"; folders, unlike custom keywords, are reliable there and visible in the UI."""
         if not msg.provider_ref:
             return
         validity_text, _, uid = msg.provider_ref.partition(":")
@@ -293,6 +282,8 @@ class ImapSmtpConnector:
             log.warning("imap_append_sent_failed", error=str(exc))
 
     def was_sent(self, message_id: str) -> bool:
+        """Search the Sent folder by Message-ID (`X-GM-RAW rfc822msgid:` on Gmail, `HEADER
+        Message-ID` elsewhere)."""
         mid = message_id.strip("<>")
         folder = self.sent_folder()
         if folder is None:
@@ -310,6 +301,8 @@ class ImapSmtpConnector:
             return typ == "OK" and bool(data and data[0] and data[0].split())
 
     def send_reply(self, reply: ReplyDraft) -> None:
+        """SMTPS or STARTTLS (`SMTP_SECURITY=plain` only for the local test server). Gmail files
+        sent mail itself; elsewhere the reply is APPENDed to Sent so `was_sent` can find it."""
         if not self.s.smtp_user or self.s.smtp_password is None:
             raise MailAuthError("SMTP_USER / SMTP_PASSWORD not set")
         mime = build_mime(

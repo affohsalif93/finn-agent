@@ -1,9 +1,5 @@
-"""Mail data contracts (ARCHITECTURE §2.3, §6). No logic.
-
-Message IDs are stored **without** angle brackets (`abc@mail.gmail.com`); the brackets are added
-only when a header is written. Paths are strings so the models serialise cleanly into Temporal
-payloads (paths, never file contents, §7.2).
-"""
+"""Mail data contracts. Message IDs are stored without angle brackets; paths are strings, so
+the models serialise cleanly into Temporal payloads."""
 
 import datetime as dt
 from typing import Literal
@@ -30,7 +26,7 @@ class InboundMessage(_Model):
     from_addr: str  # lower-case address of the verified `From`
     from_name: str | None = None
     to_addrs: list[str] = Field(default_factory=list)  # To + Cc + Delivered-To, lower-case
-    reply_to: str | None = None  # logged only; replies always go to `from_addr` (§6.1)
+    reply_to: str | None = None  # logged only; replies always go to `from_addr`
     subject: str = ""
     date: dt.datetime | None = None
     auth_results: str | None = None  # raw Authentication-Results header(s)
@@ -61,7 +57,7 @@ class ThreadMessage(_Model):
     message_id: str
     date: dt.datetime | None = None
     subject: str
-    body_text: str  # quoted history and signature stripped, pseudonymised (§8.1)
+    body_text: str  # quoted history and signature stripped, pseudonymised (D21)
     attachments: list[str] = Field(default_factory=list)  # "Wirtschaftsplan_2027.xlsx (xlsx)"
 
 
@@ -76,7 +72,7 @@ class ParsedMessage(_Model):
 
 
 class Request(_Model):
-    """Intent schema (§6.2): the LLM (or the rule fallback) classifies, code decides."""
+    """Intent schema: the LLM (or the rule fallback) classifies, code decides."""
 
     intent: Intent
     plan_year: int | None = None

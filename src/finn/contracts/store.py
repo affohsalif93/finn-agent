@@ -1,8 +1,5 @@
-"""Load reviewed contract profiles (ARCHITECTURE §3, D2) and check them against the PDFs.
-
-`load_profiles(profiles_dir, contracts_dir)` never raises for a bad profile: it returns the
-usable profiles plus findings (FAILURES.md §G), so one broken contract does not stop the others.
-"""
+"""Load reviewed contract profiles (D2) and check them against the PDFs. Never raises for a bad
+profile: usable profiles plus findings, so one broken contract stops nothing."""
 
 import hashlib
 import json

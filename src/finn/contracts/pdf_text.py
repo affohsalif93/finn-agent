@@ -1,15 +1,6 @@
-"""Contract PDF → page texts with page numbers (ARCHITECTURE §2.1), cached by file hash.
+"""Contract PDF → page texts with page numbers, cached by file hash in `data/.cache/pdf_text/`.
 
-`read_pages` extracts every page with pdfplumber once per PDF content (sha256) and keeps the
-raw texts in `data/.cache/pdf_text/<sha256>.json` (git-ignored). `mask_persons` replaces the
-names of natural persons before the text goes to the LLM (D21, ARCHITECTURE §8.1): signatory
-names in signature blocks, "Herr/Frau …", "gez. …", "Dr. …". Lenders, the borrower, amounts and
-clauses stay unchanged: they are the content. The rules are deterministic and deliberately
-narrow; organisation and role words are never masked.
-
-Quote validation and the completeness scan run on the **masked** page texts, i.e. on exactly the
-text the LLM saw.
-"""
+`mask_persons` masks natural persons' names before the LLM sees the text (D21)."""
 
 import hashlib
 import json

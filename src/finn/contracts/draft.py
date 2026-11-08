@@ -1,16 +1,5 @@
-"""Extraction-specific draft schema (LLM structured output) and its conversion to ContractProfile.
-
-Why not `ContractProfile` itself: OpenAI strict JSON schema requires every property to be
-present (`required` = all, `additionalProperties: false`) and has no free-form maps. The profile
-uses dicts (`conditions`, `definitions`, `label_hints`, `examples[].inputs`), defaults everywhere
-and decimals. The draft therefore
-- uses lists with an `id` / `key` field instead of dicts,
-- has no defaults: every field is required, "not stated" is an explicit `null`,
-- carries decimals as strings ("30.0", "0.5") that code parses,
-- leaves out everything code knows better: contract id, file, sha256, page count, schema version,
-  review and extraction metadata.
-`to_profile` converts and validates (pydantic invariants + store-level checks happen later).
-"""
+"""LLM draft schema for extraction (OpenAI strict JSON: lists instead of dicts, no defaults,
+decimals as strings, nothing code knows better) and its conversion `to_profile`."""
 
 import datetime as dt
 from decimal import Decimal, InvalidOperation
