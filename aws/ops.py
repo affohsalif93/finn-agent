@@ -1,6 +1,6 @@
 """Operate the FinnDemo instance via SSM Run Command (no SSH, no inbound port); stdlib only.
-`uv run --no-project python aws/ops.py status | logs [SERVICE] [--tail N] | redeploy | run "CMD"`
-(wrappers: aws/status|logs|redeploy .sh/.ps1); uses the AWS CLI login."""
+`uv run --no-project python aws/ops.py status | logs [SERVICE] [--tail N] | redeploy | tunnel
+| run "CMD"` (wrappers: aws/status|logs|redeploy|tunnel .sh/.ps1); uses the AWS CLI login."""
 
 import argparse
 import json
@@ -72,6 +72,30 @@ def run_remote(script: str, timeout_s: int = 600) -> int:
     return 0 if inv["Status"] == "Success" else 1
 
 
+def open_tunnel(local_port: int) -> int:
+    """SSM port forwarding to the instance's Temporal UI (bound to 127.0.0.1:8233 there).
+    Needs the Session Manager plugin for the AWS CLI."""
+    target = instance_id()
+    print(f"Temporal UI: http://localhost:{local_port}  (Ctrl+C beendet den Tunnel)", flush=True)
+    params = json.dumps({"portNumber": ["8233"], "localPortNumber": [str(local_port)]})
+    return subprocess.run(
+        [
+            "aws",
+            "ssm",
+            "start-session",
+            "--region",
+            REGION,
+            "--target",
+            target,
+            "--document-name",
+            "AWS-StartPortForwardingSession",
+            "--parameters",
+            params,
+        ],
+        check=False,
+    ).returncode
+
+
 def main() -> int:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -82,6 +106,8 @@ def main() -> int:
     logs.add_argument("service", nargs="?", default="")
     logs.add_argument("--tail", type=int, default=100)
     sub.add_parser("redeploy")
+    tunnel = sub.add_parser("tunnel", help="Temporal UI on http://localhost:PORT (Ctrl+C ends)")
+    tunnel.add_argument("--port", type=int, default=8233)
     run = sub.add_parser("run")
     run.add_argument("command")
     args = parser.parse_args()
@@ -93,6 +119,8 @@ def main() -> int:
         )
     if args.cmd == "logs":
         return run_remote(f"docker compose logs --no-color --tail {args.tail} {args.service}")
+    if args.cmd == "tunnel":
+        return open_tunnel(args.port)
     if args.cmd == "redeploy":
         return run_remote("/usr/local/bin/finn-deploy", timeout_s=1800)
     return run_remote(args.command)

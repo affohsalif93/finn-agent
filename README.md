@@ -73,6 +73,7 @@ aws login
 uv run --no-project python aws/put_env.py            # .env → SSM
 cd aws && npx -y aws-cdk@2.1146.1 deploy             # erneuter Deploy aktualisiert nur den Code
 aws/status.ps1 · aws/logs.ps1 finn-poller             # (.sh unter Linux/macOS)
+aws/tunnel.ps1                                        # Temporal-UI → http://localhost:8233 (Session-Manager-Plugin nötig)
 ```
 
 Pro Postfach darf nur ein Poller laufen. Abbau: `cdk destroy` und `aws ssm delete-parameter --name /finn/demo/env`.
