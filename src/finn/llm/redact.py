@@ -15,7 +15,6 @@ _EMAIL = re.compile(r"[\w.!#$%&'*+/=?^`{|}~-]+@[\w-]+(?:\.[\w-]+)+", re.UNICODE)
 _IBAN = re.compile(r"\b[A-Z]{2}\d{2}(?:[ ]?[A-Z0-9]{4}){2,7}(?:[ ]?[A-Z0-9]{1,3})?\b")
 # Phone: starts with +, 00 or 0 and has at least 8 digits overall; separators space / - ( ).
 _PHONE = re.compile(r"(?<![\w.,])(?:\+|00|0)\d[\d\s/()\-]{6,}\d(?![\w.,]?\d)")
-_PLACEHOLDER = re.compile(r"\[(EMAIL|PHONE|IBAN|PERSON)_\d+\]")
 _TITLES = {"dr", "dr.", "prof", "prof.", "dipl.-kfm.", "dipl.-ing.", "herr", "frau", "mag."}
 
 # Quoted history: everything from the first reply header on is dropped.
@@ -112,9 +111,6 @@ class Pseudonyms:
         if len(digits) < 8:
             return match
         return self._token("PHONE", match.strip())
-
-    def restore(self, text: str) -> str:
-        return _PLACEHOLDER.sub(lambda m: self.mapping.get(m.group(0), m.group(0)), text)
 
 
 def _name_variants(names: Iterable[str]) -> list[str]:

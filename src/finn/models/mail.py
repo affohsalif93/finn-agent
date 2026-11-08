@@ -110,7 +110,6 @@ class ReplyDraft(_Model):
     message_id: str  # deterministic (workflow / run id + seq + kind)
     html: str
     text: str
-    placeholders: dict[str, str] = Field(default_factory=dict)
     used_template: bool = True
     notes: list[str] = Field(default_factory=list)  # REPLY_* findings, for the run log
     run_id: str
@@ -120,4 +119,3 @@ class SentRecord(_Model):
     message_id: str
     sent_at: dt.datetime
     skipped_already_sent: bool = False
-    dry_run: bool = False

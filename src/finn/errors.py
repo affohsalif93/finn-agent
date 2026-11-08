@@ -1,7 +1,4 @@
-"""Error codes (docs/FAILURES.md), severities, `Finding` and the German message templates.
-
-Only the codes that are raised by code that exists are listed; later increments add theirs.
-"""
+"""Error codes (docs/FAILURES.md), severities, `Finding` and the German message templates."""
 
 from collections.abc import Sequence
 from enum import StrEnum
@@ -36,12 +33,9 @@ class ErrorCode(StrEnum):
     ATTACHMENT_ARCHIVE = "ATTACHMENT_ARCHIVE"
     ATTACHMENT_LINK_ONLY = "ATTACHMENT_LINK_ONLY"
     # C. Intent
-    INTENT_LLM_UNAVAILABLE = "INTENT_LLM_UNAVAILABLE"
     INTENT_AMBIGUOUS = "INTENT_AMBIGUOUS"
     INTENT_PARTLY_UNSUPPORTED = "INTENT_PARTLY_UNSUPPORTED"
     INTENT_CONTRACT_FILTER = "INTENT_CONTRACT_FILTER"
-    INTENT_OFF_TOPIC = "INTENT_OFF_TOPIC"
-    INTENT_QUESTION = "INTENT_QUESTION"
     # D. Attachment
     ATTACHMENT_MISSING = "ATTACHMENT_MISSING"
     ATTACHMENT_WRONG_TYPE = "ATTACHMENT_WRONG_TYPE"
@@ -99,7 +93,6 @@ class ErrorCode(StrEnum):
     # I. Reply and send
     REPLY_LLM_UNAVAILABLE = "REPLY_LLM_UNAVAILABLE"
     REPLY_NUMBER_MISMATCH = "REPLY_NUMBER_MISMATCH"
-    SEND_FAILED = "SEND_FAILED"
     SEND_ALREADY_DONE = "SEND_ALREADY_DONE"
     # J. Waiting for input
     WAIT_TIMEOUT = "WAIT_TIMEOUT"
@@ -122,18 +115,14 @@ SEVERITY: dict[ErrorCode, Severity] = {
     ErrorCode.ATTACHMENT_TNEF: Severity.ASK,
     ErrorCode.ATTACHMENT_ARCHIVE: Severity.ASK,
     ErrorCode.ATTACHMENT_LINK_ONLY: Severity.ASK,
-    ErrorCode.INTENT_LLM_UNAVAILABLE: Severity.INFO,
     ErrorCode.INTENT_AMBIGUOUS: Severity.INFO,
     ErrorCode.INTENT_PARTLY_UNSUPPORTED: Severity.INFO,
     ErrorCode.INTENT_CONTRACT_FILTER: Severity.INFO,
-    ErrorCode.INTENT_OFF_TOPIC: Severity.INFO,
-    ErrorCode.INTENT_QUESTION: Severity.INFO,
     ErrorCode.ATTACHMENT_MISSING: Severity.ASK,
     ErrorCode.ATTACHMENT_WRONG_TYPE: Severity.ASK,
     ErrorCode.ATTACHMENT_MULTIPLE: Severity.ASK,
     ErrorCode.REPLY_LLM_UNAVAILABLE: Severity.INFO,
     ErrorCode.REPLY_NUMBER_MISMATCH: Severity.INFO,
-    ErrorCode.SEND_FAILED: Severity.WARN,
     ErrorCode.SEND_ALREADY_DONE: Severity.IGNORE,
     ErrorCode.WAIT_TIMEOUT: Severity.INFO,
     ErrorCode.INFRA_IMAP_DOWN: Severity.WARN,
@@ -189,12 +178,8 @@ SEVERITY: dict[ErrorCode, Severity] = {
 }
 
 # German reply templates, keyed by code (or "CODE.variant"); filled with str.format.
+# Codes that are only logged (gate, send, wait, infrastructure) have none.
 MESSAGES_DE: dict[str, str] = {
-    "GATE_SENDER_REJECTED": "Absender {sender} ist nicht freigegeben.",
-    "GATE_AUTH_FAILED": "Absender {sender}: DMARC-Prüfung nicht bestanden ({dmarc}).",
-    "GATE_LOOP": "Automatische Nachricht oder eigene Nachricht ignoriert ({reason}).",
-    "GATE_NOT_ADDRESSED": "Nachricht nicht an {address} adressiert.",
-    "GATE_DUPLICATE": "Nachricht {message_id} wurde bereits verarbeitet.",
     "MAIL_TOO_LARGE": "Die Nachricht ist zu groß ({size_mb} MB, Grenze {limit_mb} MB). Bitte "
     "nur den Wirtschaftsplan als Excel-Datei senden.",
     "MAIL_UNPARSEABLE": "Ihre Nachricht konnte nicht gelesen werden.",
@@ -205,13 +190,10 @@ MESSAGES_DE: dict[str, str] = {
     "entpackt anhängen.",
     "ATTACHMENT_LINK_ONLY": "Ich kann keine Links öffnen ({host}). Bitte den Wirtschaftsplan als "
     "Excel-Datei (.xlsx) direkt anhängen.",
-    "INTENT_LLM_UNAVAILABLE": "Anfrage regelbasiert eingeordnet (Sprachmodell nicht erreichbar).",
     "INTENT_AMBIGUOUS": "Ich habe Ihre Nachricht als Covenant-Prüfung verstanden.",
     "INTENT_PARTLY_UNSUPPORTED": "Nicht unterstützt und daher nicht bearbeitet: {what}.",
     "INTENT_CONTRACT_FILTER": "Geprüft wurden nur: {chosen}. Weitere Verträge mit Covenants: "
     "{others}.",
-    "INTENT_OFF_TOPIC": "Ich prüfe Financial Covenants anhand von Wirtschaftsplänen.",
-    "INTENT_QUESTION": "Rückfragen zu früheren Ergebnissen kann ich noch nicht beantworten.",
     "ATTACHMENT_MISSING": "Bitte den Wirtschaftsplan als Excel-Datei (.xlsx) anhängen.",
     "ATTACHMENT_WRONG_TYPE": "Erhalten: {file}. Ich benötige den Wirtschaftsplan als "
     "Excel-Datei (.xlsx).",
@@ -220,13 +202,6 @@ MESSAGES_DE: dict[str, str] = {
     "REPLY_LLM_UNAVAILABLE": "Antworttext aus der Vorlage (Sprachmodell nicht erreichbar).",
     "REPLY_NUMBER_MISMATCH": "Umformulierter Text verworfen (Zahl nicht im Ergebnis: {numbers}); "
     "Vorlage verwendet.",
-    "SEND_FAILED": "Versand fehlgeschlagen: {detail}.",
-    "SEND_ALREADY_DONE": "Antwort {message_id} wurde bereits gesendet.",
-    "WAIT_TIMEOUT": "Keine Rückmeldung innerhalb von {days} Tagen; Vorgang beendet.",
-    "INFRA_IMAP_DOWN": "Postfach nicht erreichbar: {detail}.",
-    "INFRA_MAILBOX_AUTH": "Anmeldung am Postfach fehlgeschlagen ({host}).",
-    "INFRA_IMAP_FOLDER_MISSING": "IMAP-Ordner {folder} existiert nicht.",
-    "INFRA_UNEXPECTED": "Bei der Verarbeitung ist ein unerwarteter Fehler aufgetreten.",
     "ATTACHMENT_XLS_LEGACY": "Die Datei {file} ist im alten Format .xls. Bitte im Format .xlsx "
     "speichern und erneut senden.",
     "ATTACHMENT_MACROS": "Die Datei {file} enthält Makros. Makros wurden nicht ausgeführt, "

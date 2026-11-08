@@ -122,7 +122,7 @@ CovenantResult:   covenant_id, contract_id, name_de,
 
 # ── Reply ────────────────────────────────────────────
 ReplyDraft:       to, subject, in_reply_to, references[], message_id (deterministic),
-                  html, text, placeholders: dict[str, str], used_template: bool
+                  html, text, used_template: bool
 SentRecord:       message_id, sent_at, skipped_already_sent: bool
 RunRecord:        run_id = workflow ID; all of the above → runs/<id>/
 ```
@@ -887,7 +887,7 @@ services:
 volumes:   ./runs (rw) · ./data/contract_profiles (ro) · ./material (ro) · temporal-data
 env_file:  .env (optional, never baked into the image); compose sets TEMPORAL_ADDRESS=temporal:7233
 ```
-End-to-end check: `docker compose run --rm finn-worker ping` → `pong` (placeholder `PingWorkflow` until the real workflow exists). Verified: restart of Temporal (worker reconnects with backoff), `down`/`up` keeps workflow history, SIGTERM shuts down cleanly.
+Verified: restart of Temporal (worker reconnects with backoff), `down`/`up` keeps workflow history, SIGTERM shuts down cleanly.
 No database for Finn itself: workflow state lives in Temporal, the audit trail in `runs/`, profiles in the repo. OpenAI is external.
 
 **Optional profile `testmail`** (local mail test environment; the real mailbox and the real worker are never involved):

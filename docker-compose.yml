@@ -1,6 +1,5 @@
 # Finn runtime: Temporal dev server + worker + poller (ARCHITECTURE.md §13).
 #   docker compose up -d                                core stack
-#   docker compose run --rm finn-worker ping            end-to-end check (prints "pong")
 #   Temporal UI: http://localhost:8233 (localhost only)
 
 name: finn

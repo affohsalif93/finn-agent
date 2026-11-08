@@ -1,11 +1,8 @@
-"""Command line entry point: `finn worker | poller | ping | check`, `finn plan read`,
-`finn contracts check`."""
+"""Command line entry point: worker, poller, check, process, plan, contracts and demo commands."""
 
 import asyncio
 import io
 import sys
-import uuid
-from datetime import timedelta
 from pathlib import Path
 from typing import Annotated
 
@@ -59,27 +56,6 @@ def poller() -> None:
     asyncio.run(run_poller(get_settings()))
 
 
-@app.command()
-def ping(timeout: float = typer.Option(30, help="Seconds to wait for the result.")) -> None:
-    """Run PingWorkflow on the worker and print the result (end-to-end check)."""
-    from finn.runtime import connect
-    from finn.workflows.ping import PingWorkflow
-
-    settings = get_settings()
-
-    async def _run() -> str:
-        client = await connect(settings)
-        assert client is not None
-        return await client.execute_workflow(
-            PingWorkflow.run,
-            id=f"ping-{uuid.uuid4()}",
-            task_queue=settings.temporal_task_queue,
-            execution_timeout=timedelta(seconds=timeout),
-        )
-
-    typer.echo(asyncio.run(_run()))
-
-
 @plan_app.command("read")
 def plan_read(
     path: Annotated[
@@ -100,7 +76,7 @@ def _profiles_dir(profiles: Path | None) -> Path:
     if not directory.is_dir() or not any(directory.glob("*.json")):
         typer.echo(
             f"Keine Vertragsprofile in {directory}. Die geprüften Profile entstehen erst mit "
-            "`finn contracts extract` (Inkrement 6). Zum Testen: "
+            "`finn contracts extract`. Zum Testen: "
             "--profiles tests/fixtures/profiles_gold",
             err=True,
         )

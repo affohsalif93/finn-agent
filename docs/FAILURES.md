@@ -55,12 +55,12 @@ Code checks these after the intent classification; anything missing → `ASK`.
 
 | Code | Failure | Detection | Reaction | Reply (DE, gist) | Built | Fixture |
 |---|---|---|---|---|---|---|
-| `INTENT_LLM_UNAVAILABLE` | LLM down after retries | activity failure | rule fallback: `.xlsx` attached + keywords → `covenant_check`; else ASK | (normal reply) | ✅ | test with mocked LLM |
+| – (no code) | LLM down after retries | activity failure | rule fallback: `.xlsx` attached + keywords → `covenant_check`; else ASK | (normal reply) | ✅ | test with mocked LLM |
 | `INTENT_AMBIGUOUS` | vague request + `.xlsx` | intent `covenant_check` with low confidence | proceed, state the assumption | "Ich habe Ihre Nachricht als Covenant-Prüfung verstanden." | ✅ | `mail_vague.eml` |
 | `INTENT_PARTLY_UNSUPPORTED` | several requests, some unsupported | intent notes | do the check, list what isn't supported | "Fristenprüfung kann ich noch nicht; hier die Covenant-Prüfung." | ✅ | `mail_two_requests.eml` |
 | `INTENT_CONTRACT_FILTER` | only some contracts requested | intent parameter | filter; mention the others | "Geprüft: Landesbank. Weitere Verträge mit Covenants: …" | ✅ | `mail_only_landesbank.eml` |
-| `INTENT_OFF_TOPIC` | unrelated request | intent `other` | short reply | "Ich prüfe Covenants anhand von Wirtschaftsplänen. …" | ✅ | `mail_off_topic.eml` |
-| `INTENT_QUESTION` | question about an earlier result | intent `question_about_result` | polite "not yet" | "Rückfragen zu Ergebnissen kann ich noch nicht beantworten." | 📐 | – |
+| – (no code) | unrelated request | intent `other` | short reply | "Ich prüfe Covenants anhand von Wirtschaftsplänen. …" | ✅ | `mail_off_topic.eml` |
+| – (no code) | question about an earlier result | intent `question_about_result` | polite "not yet" | "Rückfragen zu Ergebnissen kann ich noch nicht beantworten." | 📐 | – |
 
 ## D. Attachment (does the file fit the intent?)
 
@@ -145,7 +145,7 @@ Code checks these after the intent classification; anything missing → `ASK`.
 |---|---|---|---|---|---|
 | `REPLY_LLM_UNAVAILABLE` | LLM down after retries | activity failure | German template reply | ✅ | mocked LLM |
 | `REPLY_NUMBER_MISMATCH` | LLM text changed/added a number | number check | discard LLM text → template | ✅ | mocked LLM |
-| `SEND_FAILED` | SMTP unavailable | exception | Temporal retries | ✅ | integration test |
+| – (no code) | SMTP unavailable | exception | Temporal retries | ✅ | integration test |
 | `SEND_ALREADY_DONE` | retry after a successful send | `was_sent(message_id)` | skip | ✅ | integration test |
 | `SEND_BOUNCED` | recipient bounces | bounce mail in inbox | log; operator alert | ✅ log | `mail_bounce.eml` |
 

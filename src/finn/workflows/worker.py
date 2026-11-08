@@ -9,9 +9,8 @@ from temporalio.worker import Worker
 
 from finn.config import Settings
 from finn.runtime import connect, install_stop_handlers
-from finn.workflows.activities import FinnActivities, ping
+from finn.workflows.activities import FinnActivities
 from finn.workflows.covenant_check import CovenantCheckWorkflow
-from finn.workflows.ping import PingWorkflow
 
 log = structlog.get_logger(__name__)
 
@@ -27,8 +26,8 @@ async def run_worker(settings: Settings) -> None:
         worker = Worker(
             client,
             task_queue=settings.temporal_task_queue,
-            workflows=[PingWorkflow, CovenantCheckWorkflow],
-            activities=[ping, *activities.all()],
+            workflows=[CovenantCheckWorkflow],
+            activities=activities.all(),
             activity_executor=activity_executor,
             graceful_shutdown_timeout=timedelta(seconds=10),
         )

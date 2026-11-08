@@ -17,7 +17,6 @@ from finn.plan.labels import (
     Statement,
     label_de,
     normalise,
-    normalise_loan_number,
     years_in,
 )
 
@@ -274,23 +273,6 @@ def check_plan_year(plan: Plan, requested_year: int | None) -> list[Finding]:
     if requested_year is None or requested_year == plan.plan_year:
         return []
     return [finding(ErrorCode.PLAN_YEAR_MISMATCH, expected=requested_year, found=plan.plan_year)]
-
-
-def check_contract_loans(plan: Plan, contract_loans: Mapping[str, str]) -> list[Finding]:
-    """Contract loans (contract ID -> loan number) vs. numbered bank loans in the schedule."""
-    in_plan = {normalise_loan_number(ln.loan_number): ln for ln in plan.loans if ln.loan_number}
-    expected = {normalise_loan_number(n): (c, n) for c, n in contract_loans.items()}
-    out = [
-        finding(ErrorCode.PLAN_CONTRACT_NO_LOAN, contract=contract, loan_number=number)
-        for key, (contract, number) in expected.items()
-        if key not in in_plan
-    ]
-    out.extend(
-        finding(ErrorCode.PLAN_LOAN_NO_CONTRACT, label=ln.label, refs=[ln.refs["label"]])
-        for key, ln in in_plan.items()
-        if key not in expected and ln.kind == "bank"
-    )
-    return out
 
 
 def check_scale(plan: Plan, contract_amounts_eur: Sequence[Decimal]) -> list[Finding]:

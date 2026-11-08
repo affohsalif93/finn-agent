@@ -78,11 +78,9 @@ warn_required_dynamic_aliases = true
 testpaths = ["tests"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
-# Integration tests (need Docker / a running Temporal) are deselected by default;
-# run them with `uv run pytest -m integration` (the last -m on the command line wins).
-# Live mail tests need the compose profile `testmail` (GreenMail): `uv run pytest -m mailserver`.
-addopts = "-ra --strict-markers -m 'not integration and not mailserver'"
+# Live mail tests need the compose profile `testmail` (GreenMail) and are deselected by default;
+# run them with `uv run pytest -m mailserver` (the last -m on the command line wins).
+addopts = "-ra --strict-markers -m 'not mailserver'"
 markers = [
-    "integration: needs Docker / a running Temporal server (deselected by default)",
     "mailserver: live mail tests against GreenMail, compose profile testmail (deselected)",
 ]

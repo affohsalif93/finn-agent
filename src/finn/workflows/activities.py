@@ -31,13 +31,6 @@ from finn.plan.reader import PlanReadResult
 NON_RETRYABLE = ["InputError", "MailAuthError"]
 
 
-@activity.defn
-def ping() -> str:
-    """Trivial activity used to verify worker <-> Temporal end to end."""
-    activity.logger.info("ping activity called")
-    return "pong"
-
-
 def _input_errors[T](fn: Callable[[], T]) -> T:
     try:
         return fn()

@@ -13,7 +13,7 @@ DEFAULT_OPENAI_MODEL = "gpt-6.1-sol"
 
 
 class Settings(BaseSettings):
-    """Only the settings needed so far; the full key list lives in `.env.example`."""
+    """All of Finn's settings; `.env.example` shows the common keys."""
 
     # A missing .env file is fine: pydantic-settings simply skips it.
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")

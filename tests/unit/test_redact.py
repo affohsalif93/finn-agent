@@ -1,6 +1,14 @@
 """Pseudonymisation before the intent call (§8.1, D21)."""
 
+import re
+
 from finn.llm.redact import Pseudonyms, clean_body
+
+
+def _restore(p: Pseudonyms, text: str) -> str:
+    """Map placeholders back via the stored mapping (round-trip check)."""
+    return re.sub(r"\[[A-Z]+_\d+\]", lambda m: p.mapping.get(m.group(0), m.group(0)), text)
+
 
 BODY = """Hallo Finn,
 
@@ -60,7 +68,7 @@ def test_pseudonymise_and_restore() -> None:
     # business content stays: numbers, dates, loan numbers, company
     for keep in ("313.200", "31.12.2027", "2027", "4471 203 118", "FD-2022-08817"):
         assert keep in out
-    assert p.restore(out) == text
+    assert _restore(p, out) == text
 
 
 def test_same_original_same_placeholder() -> None:
@@ -75,4 +83,4 @@ def test_name_variants() -> None:
     p = Pseudonyms()
     out = p.pseudonymise("Herr Mustermann und Max Mustermann", names=["Mustermann, Max"])
     assert "Mustermann" not in out
-    assert p.restore(out) == "Herr Mustermann und Max Mustermann"
+    assert _restore(p, out) == "Herr Mustermann und Max Mustermann"

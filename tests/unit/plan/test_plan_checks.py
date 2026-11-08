@@ -49,18 +49,6 @@ def test_plan_year_mismatch(plan: Plan) -> None:
     assert f.message_de == "Angefragt: 2026, die Datei enthält Plan 2027."
 
 
-def test_contract_loans(plan: Plan) -> None:
-    contracts = {"V1": "4471203118", "V2": "FD-2022-08817", "V3": "LBM-INV-2025-0412"}
-    assert checks.check_contract_loans(plan, contracts) == []
-    findings = checks.check_contract_loans(plan, {"V1": "4471 203 118", "V9": "XX-1"})
-    codes = sorted((f.code, f.severity) for f in findings)
-    assert codes == [
-        (ErrorCode.PLAN_CONTRACT_NO_LOAN, Severity.WARN),  # V9 not in the schedule
-        (ErrorCode.PLAN_LOAN_NO_CONTRACT, Severity.INFO),  # Förderbank loan without contract
-        (ErrorCode.PLAN_LOAN_NO_CONTRACT, Severity.INFO),  # Landesbank loan without contract
-    ]
-
-
 def test_scale(plan: Plan) -> None:
     amounts = [Decimal(20_000_000), Decimal(30_000_000), Decimal(37_000_000), Decimal(64_000_000)]
     assert checks.check_scale(plan, amounts) == []

@@ -1,4 +1,4 @@
-"""Plain-text view of a `Report` for `finn check` (German; the mail template comes later)."""
+"""Plain-text view of a `Report` for `finn check` (German)."""
 
 from collections.abc import Sequence
 from decimal import Decimal

@@ -18,7 +18,7 @@ from finn import runs
 from finn.calc import engine
 from finn.config import Settings
 from finn.contracts.store import load_profiles
-from finn.errors import ErrorCode, Finding, Severity, finding
+from finn.errors import ErrorCode, Finding, Severity
 from finn.llm.redact import Pseudonyms, clean_body
 from finn.mail import gate
 from finn.mail.connector import MailConnector
@@ -44,6 +44,7 @@ from finn.models.run import (
     SendInput,
 )
 from finn.plan import read_plan
+from finn.plan.checks import check_plan_year
 from finn.plan.reader import PlanReadResult
 from finn.reply import render as reply
 from finn.request import intent
@@ -173,10 +174,8 @@ def load_and_validate_plan(inp: PlanInput) -> PlanReadResult:
     """Plan reader + checks (§4.4) + plan year vs. request (PLAN_YEAR_MISMATCH)."""
     result = read_plan(Path(inp.attachment.path))
     plan = result.plan
-    year = inp.request.plan_year
-    if plan is not None and year and plan.plan_year != year:
-        mismatch = finding(ErrorCode.PLAN_YEAR_MISMATCH, expected=year, found=plan.plan_year)
-        result = result.model_copy(update={"findings": [*result.findings, mismatch]})
+    if plan is not None and (mismatch := check_plan_year(plan, inp.request.plan_year)):
+        result = result.model_copy(update={"findings": [*result.findings, *mismatch]})
     runs.write_json(inp.run_dir, "plan_inputs.json", plan.model_dump(mode="json") if plan else {})
     runs.write_json(
         inp.run_dir, "checks.json", [f.model_dump(mode="json") for f in result.findings]
@@ -215,7 +214,6 @@ def render_reply(inp: RenderInput, settings: Settings) -> ReplyDraft:
     run_id = runs.run_id(inp.run_dir)
     notes: list[Finding] = []
     used_template = True
-    placeholders: dict[str, str] = {}
     if inp.kind == "result":
         assert inp.report is not None
         ctx = reply.result_context(
@@ -263,7 +261,6 @@ def render_reply(inp: RenderInput, settings: Settings) -> ReplyDraft:
         seq=inp.seq,
         from_addr=settings.smtp_user or settings.imap_user or "finn@finn.invalid",
         used_template=used_template,
-        placeholders=placeholders,
         notes=notes,
     )
     base = Path(inp.run_dir)

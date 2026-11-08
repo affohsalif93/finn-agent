@@ -315,13 +315,12 @@ def result_context(
     ebitda = rw.ebitda_blocks(report.results)
     links = [Link(b.anchor, f"{b.title}") for b in blocks]
     links += [Link(e.anchor, e.title) for e in ebitda]
-    pct = f"{tight_ratio * 100:.0f}"
     return Context(
         kind="result",
         salutation=salutation(inbound.from_name),
         intro=_intro(h),
         tone=_tone(report),
-        summary=[s.replace("unter 10 %", f"unter {pct} %") for s in _summary(report)],
+        summary=_summary(report),
         early_warning=EARLY_WARNING,
         table_headers=["Covenant", f"Plan {year}", "Grenze", "Spielraum", "Erfüllt"],
         rows=rows,
@@ -467,13 +466,9 @@ _env.globals["ebitda_text"] = rw.ebitda_text
 _NUM = re.compile(r"(?<![\w{])[-−]?\d[\d.,]*\d(?![\w}])|(?<![\w{])\d(?![\w}])")
 _PH = re.compile(r"\{\{[A-Z]+\d+\}\}")
 
-POLISH_SYSTEM = """\
-Du formulierst Absätze einer geschäftlichen E-Mail auf Deutsch (Sie-Form, sachlich, knapp) um.
-Zahlen, Namen und Fundstellen sind durch Platzhalter wie {{N3}} oder {{NAME1}} ersetzt.
-Regeln: Jeder Platzhalter muss genau so (mit doppelten geschweiften Klammern) erhalten bleiben,
-mindestens einmal. Füge keine Zahlen, Namen, Fakten oder Wertungen hinzu, lass nichts weg.
-Ändere nicht, ob ein Covenant eingehalten ist. Gib so viele Absätze bzw. Hinweise zurück, wie du
-bekommen hast, in derselben Reihenfolge."""
+POLISH_SYSTEM = (
+    (Path(__file__).parent / "prompts" / "polish.md").read_text(encoding="utf-8").rstrip()
+)
 
 
 class PolishAnswer(BaseModel):
@@ -579,7 +574,6 @@ def draft(
     seq: int,
     from_addr: str,
     used_template: bool = True,
-    placeholders: dict[str, str] | None = None,
     notes: Sequence[Finding] = (),
 ) -> ReplyDraft:
     html, text = render(ctx)
@@ -593,7 +587,6 @@ def draft(
         message_id=reply_message_id(workflow_id, seq, ctx.kind, from_addr),
         html=html,
         text=text,
-        placeholders=placeholders or {},
         used_template=used_template,
         notes=[f"{f.code}: {f.message_de}" for f in notes],
         run_id=ctx.run_id,
