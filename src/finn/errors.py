@@ -19,6 +19,10 @@ class Severity(StrEnum):
     INFO = "INFO"
 
 
+# No covenant result may be confirmed while one of these is open (D7).
+STOPPING = frozenset({Severity.BLOCK, Severity.ASK})
+
+
 class ErrorCode(StrEnum):
     # A. Gate (poller; logged as security events, never in a reply)
     GATE_SENDER_REJECTED = "GATE_SENDER_REJECTED"
@@ -313,7 +317,7 @@ def finding(
     key = f"{code}.{variant}" if variant else str(code)
     sev = severity or SEVERITY[code]
     if affects is None:
-        affects = "all" if sev in (Severity.BLOCK, Severity.ASK) else []
+        affects = "all" if sev in STOPPING else []
     return Finding(
         code=code,
         severity=sev,
@@ -324,6 +328,6 @@ def finding(
     )
 
 
-def has_blocking(findings: list[Finding]) -> bool:
-    """True if no covenant result may be confirmed (D7)."""
-    return any(f.severity in (Severity.BLOCK, Severity.ASK) for f in findings)
+def stopping(findings: Sequence[Finding]) -> list[Finding]:
+    """Findings that forbid a covenant result (D7): reply ASK / BLOCK and wait."""
+    return [f for f in findings if f.severity in STOPPING]

@@ -17,6 +17,7 @@ from pydantic import BaseModel, ConfigDict
 from finn.errors import ErrorCode, Finding, finding
 from finn.llm import client
 from finn.models.mail import Attachment, InputCheck, Intent, ParsedMessage, Request
+from finn.numbers import format_de, number_de, to_decimal
 
 LOW_CONFIDENCE = 0.6
 
@@ -177,8 +178,8 @@ def _missing_reason(thread: Sequence[ParsedMessage], max_mail_mb: float) -> Find
             size = max([inbound.size, *(a.size for a in msg.attachments)])
             return finding(
                 ErrorCode.MAIL_TOO_LARGE,
-                size_mb=f"{size / 1024 / 1024:.1f}".replace(".", ","),
-                limit_mb=f"{max_mail_mb:g}".replace(".", ","),
+                size_mb=format_de(to_decimal(size / 1024 / 1024), 1),
+                limit_mb=number_de(to_decimal(max_mail_mb), 3),
             )
         if msg.unparseable:
             return finding(ErrorCode.MAIL_UNPARSEABLE)

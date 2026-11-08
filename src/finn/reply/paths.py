@@ -17,14 +17,25 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from decimal import ROUND_DOWN, Decimal
 
-from finn.calc.formula import number_de
-from finn.calc.render import headroom_de, met_de, threshold_de, value_de
 from finn.calc.rounding import effective_decimals, headroom, is_met, is_tight, round_half_up
 from finn.errors import ErrorCode
 from finn.models.contract import Source
 from finn.models.plan import CellRef, FactKey
 from finn.models.result import AssumedZero, CovenantResult, Excluded, Trace
 from finn.models.result import Used as UsedTrace
+from finn.numbers import number_de, unit_suffix
+from finn.wording import (
+    STATUS_DE,
+    alt_status_de,
+    headroom_de,
+    limit_de,
+    met_de,
+    minus,
+    strip_parenthetical,
+    threshold_de,
+    value_de,
+    zeros_note,
+)
 
 # Short position labels per building block (the Excel label goes into the HTML title attribute).
 SHORT_LABELS: dict[str, str] = {
@@ -182,8 +193,7 @@ def footnote(r: CovenantResult) -> str:
         parts.append(f"{r.sources[0].section} S. {r.sources[0].page}")
     text = f"gem. {contract_no(r.contract_id)}" + (f", {'; '.join(parts)}" if parts else "")
     if r.status in ("not_computable", "manual_review") and r.reason:
-        word = "nicht berechenbar" if r.status == "not_computable" else "manuelle Prüfung"
-        text += f" – {word}: {r.reason}"
+        text += f" – {STATUS_DE[r.status]}: {r.reason}"
     return text
 
 
@@ -214,19 +224,6 @@ def _short(t: UsedTrace | Excluded | AssumedZero) -> str:
     return SHORT_LABELS.get(t.component, t.label_de)
 
 
-def _bare(label: str) -> str:
-    return re.sub(r"\s*\([^)]*\)\s*$", "", label)
-
-
-def _weighted(label: str, w: Decimal, first: bool) -> str:
-    if w == 1:
-        return label if first else f"+ {label}"
-    if w == -1:
-        return f"− {label}"
-    sign = "− " if w < 0 else ("" if first else "+ ")
-    return f"{sign}{number_de(abs(w))} × {label}"
-
-
 def _side_words(traces: Sequence[Trace]) -> str:
     used = [t for t in traces if isinstance(t, UsedTrace)]
     if (
@@ -236,7 +233,7 @@ def _side_words(traces: Sequence[Trace]) -> str:
         and 2 <= len([p for p in used[0].parts if isinstance(p, UsedTrace)]) <= 3
     ):
         used = [p for p in used[0].parts if isinstance(p, UsedTrace)]
-    words = [_weighted(_bare(_short(t)), t.weight, i == 0) for i, t in enumerate(used)]
+    words = [_prefix(t.weight, i == 0) + strip_parenthetical(_short(t)) for i, t in enumerate(used)]
     text = " ".join(words)
     return f"({text})" if len(used) > 1 else text
 
@@ -333,13 +330,13 @@ def rounding_words(r: CovenantResult) -> str:
 
 def result_line(r: CovenantResult) -> str:
     if r.status in ("not_computable", "manual_review"):
-        word = "nicht berechenbar" if r.status == "not_computable" else "manuelle Prüfung"
+        word = STATUS_DE[r.status]
         return f"{word}: {r.reason}" if r.reason else word
     if r.value_raw is None or r.value_rounded is None:
         return value_de(r)
     d = effective_decimals(r.decimals)
     raw = r.value_raw.quantize(Decimal(1).scaleb(-(d + 1)), rounding=ROUND_DOWN)
-    pct = " %" if r.unit == "percent" else ""
+    pct = unit_suffix(r.unit)
     calc = ""
     if r.numerator_value is not None and r.denominator_value is not None:
         times = " × 100" if r.unit == "percent" else ""
@@ -353,8 +350,8 @@ def head_line(r: CovenantResult) -> str:
     if r.value_rounded is None:
         return f"{met_de(r)} · Grenze {threshold_de(r)}"
     op = "≤" if r.operator == "<=" else "≥"
-    limit = threshold_de(r).split(" ", 1)[1]
-    room = headroom_de(r).replace("-", "−")
+    limit = limit_de(r)
+    room = minus(headroom_de(r))
     knapp = " (knapp)" if r.status == "met" and r.tight else ""
     word = " · nicht eingehalten" if r.status == "breached" else ""
     return f"{value_de(r)} {op} {limit} · Spielraum {room}{knapp}{word}"
@@ -432,8 +429,7 @@ def _with_excluded(
     if met == was_met and tight == r.tight:
         return ""
     word = "nicht eingehalten" if not met else "knapp eingehalten" if tight else "eingehalten"
-    pct = " %" if r.unit == "percent" else ""
-    return f" Einbezogen wäre der Wert {number_de(alt, d)}{pct} ({word})."
+    return f" Einbezogen wäre der Wert {number_de(alt, d)}{unit_suffix(r.unit)} ({word})."
 
 
 def _walk_specials(
@@ -488,22 +484,19 @@ def strip_label(text: str, r: CovenantResult) -> str:
     return text[:1].upper() + text[1:]
 
 
-def specials(r: CovenantResult, tight_ratio: Decimal = Decimal("0.10")) -> list[str]:
+def specials(r: CovenantResult, tight_ratio: Decimal) -> list[str]:
     out: list[str] = []
     zeros: list[str] = []
     if r.components is not None:
         _walk_specials(r, r.components.numerator, Decimal(1), True, out, zeros, tight_ratio)
         _walk_specials(r, r.components.denominator, Decimal(1), False, out, zeros, tight_ratio)
     if zeros:
-        out.append(f"Im Plan nicht ausgewiesen, mit 0 angesetzt: {', '.join(zeros)}.")
+        out.append(zeros_note(zeros))
     for alt in r.alternatives:
-        word = {"met": "eingehalten", "breached": "nicht eingehalten"}.get(
-            alt.status, "nicht berechenbar"
-        )
-        pct = " %" if r.unit == "percent" else ""
         out.append(
             "Im Plan nicht eindeutig belegt, konservativ gerechnet. Alternative "
-            f"({alt.assumption_de}): {number_de(alt.value_rounded)}{pct} ({word})."
+            f"({alt.assumption_de}): {number_de(alt.value_rounded)}{unit_suffix(r.unit)} "
+            f"({alt_status_de(alt.status)})."
         )
     for f in r.findings:
         text = strip_label(f.message_de, r)
@@ -512,7 +505,7 @@ def specials(r: CovenantResult, tight_ratio: Decimal = Decimal("0.10")) -> list[
     return out
 
 
-def path_block(r: CovenantResult, status: str, tight_ratio: Decimal = Decimal("0.10")) -> PathBlock:
+def path_block(r: CovenantResult, status: str, tight_ratio: Decimal) -> PathBlock:
     return PathBlock(
         anchor=anchor(r),
         title=f"{r.contract_id} {r.contract_name_de} · {r.name_de}",
@@ -563,7 +556,7 @@ def ebitda_blocks(results: Sequence[CovenantResult]) -> list[EbitdaBlock]:
         notes: list[str] = []
         zeros = [_short(p) for p in e.parts if isinstance(p, AssumedZero)]
         if zeros:
-            notes.append(f"Im Plan nicht ausgewiesen, mit 0 angesetzt: {', '.join(zeros)}.")
+            notes.append(zeros_note(zeros))
         for x in e.parts:
             if isinstance(x, Excluded):
                 notes.append(f"{_short(x)} nicht einbezogen: {x.reason}.")

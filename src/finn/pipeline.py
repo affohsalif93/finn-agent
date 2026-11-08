@@ -5,7 +5,6 @@ functions; Temporal adds durability, not logic. Steps write their audit files to
 """
 
 import traceback
-from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -18,7 +17,7 @@ from finn import runs
 from finn.calc import engine
 from finn.config import Settings
 from finn.contracts.store import load_profiles
-from finn.errors import ErrorCode, Finding, Severity
+from finn.errors import ErrorCode, Finding, Severity, stopping
 from finn.llm.redact import Pseudonyms, clean_body
 from finn.mail import gate
 from finn.mail.connector import MailConnector
@@ -52,15 +51,9 @@ from finn.request import intent
 log = structlog.get_logger(__name__)
 
 _FORWARD = ("wg:", "fw:", "fwd:", "wtr:")
-STOPPING = (Severity.BLOCK, Severity.ASK)
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
-
-
-def stopping_findings(findings: Sequence[Finding]) -> list[Finding]:
-    """Findings that forbid a covenant result (D7): reply ASK / BLOCK and wait."""
-    return [f for f in findings if f.severity in STOPPING]
 
 
 def _recorder(run_dir: str) -> intent.LLMCall:
@@ -180,7 +173,7 @@ def load_and_validate_plan(inp: PlanInput) -> PlanReadResult:
     runs.write_json(
         inp.run_dir, "checks.json", [f.model_dump(mode="json") for f in result.findings]
     )
-    stops = stopping_findings(result.findings)
+    stops = stopping(result.findings)
     runs.log_line(
         inp.run_dir,
         "plan",
@@ -196,7 +189,7 @@ def calculate(inp: CalcInput, settings: Settings) -> Report:
         inp.plan_result.plan,
         profiles,
         inp.plan_result.findings,
-        settings,
+        tight_ratio=settings.tight_headroom_ratio,
         profile_findings=profile_findings,
         file=inp.file,
         contract_filter=inp.request.contract_filter,
@@ -263,10 +256,7 @@ def render_reply(inp: RenderInput, settings: Settings) -> ReplyDraft:
         used_template=used_template,
         notes=notes,
     )
-    base = Path(inp.run_dir)
-    for name in (f"reply-{inp.seq}-{inp.kind}", "reply"):
-        (base / f"{name}.html").write_text(draft.html, encoding="utf-8")
-        (base / f"{name}.txt").write_text(draft.text, encoding="utf-8")
+    runs.write_reply(inp.run_dir, inp.seq, inp.kind, draft.html, draft.text)
     runs.log_line(
         inp.run_dir,
         "render",
@@ -293,7 +283,7 @@ def send_reply(inp: SendInput, connector: MailConnector) -> SentRecord:
         connector.send_reply(draft)
         record = SentRecord(message_id=draft.message_id, sent_at=datetime.now(UTC))
         runs.log_line(inp.run_dir, "send", f"{draft.kind} an {draft.to}: {draft.message_id}")
-    runs.write_json(marker.parent, marker.name, record)
+    runs.write_sent_marker(inp.run_dir, record)
     return record
 
 
@@ -368,12 +358,12 @@ def process_eml(
             return result
         plan_file = classified.input.plan
         if classified.input.status == "ask" or plan_file is None:
-            finish("ask", findings=stopping_findings(classified.input.findings))
+            finish("ask", findings=stopping(classified.input.findings))
             return result
         plan_result = load_and_validate_plan(
             PlanInput(attachment=plan_file, request=req, run_dir=str(run_dir))
         )
-        stops = stopping_findings(plan_result.findings)
+        stops = stopping(plan_result.findings)
         if stops:
             blocked = any(f.severity == Severity.BLOCK for f in stops)
             finish("block" if blocked else "ask", findings=stops, file=plan_file.filename)

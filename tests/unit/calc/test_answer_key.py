@@ -12,6 +12,7 @@ from finn.models.contract import ContractProfile
 from finn.models.plan import FactKey, ItemKey, Plan
 from finn.models.result import CovenantResult, Excluded, Report, Used
 from finn.plan import PlanReadResult, read_plan
+from mailkit import TIGHT_RATIO
 
 GOLD = Path(__file__).resolve().parents[2] / "fixtures" / "profiles_gold"
 D = Decimal
@@ -19,7 +20,9 @@ D = Decimal
 
 @pytest.fixture(scope="module")
 def report(sample_result: PlanReadResult, gold_profiles: list[ContractProfile]) -> Report:
-    return calculate(sample_result.plan, gold_profiles, sample_result.findings)
+    return calculate(
+        sample_result.plan, gold_profiles, sample_result.findings, tight_ratio=TIGHT_RATIO
+    )
 
 
 def by_id(report: Report) -> dict[str, CovenantResult]:
@@ -185,7 +188,7 @@ def test_sensitivity_verified_at_the_boundary(
 ) -> None:
     assert sample_result.plan is not None
     plan = _with(sample_result.plan, **{item: -drop})
-    r = by_id(calculate(plan, gold_profiles, []))[covenant]
+    r = by_id(calculate(plan, gold_profiles, [], tight_ratio=TIGHT_RATIO))[covenant]
     assert (r.value_rounded, r.status) == (D(expected), status)
 
 
@@ -203,7 +206,9 @@ def _v4_with_shareholder_loan() -> ContractProfile:
 def test_trap_profile_with_shareholder_loan_gives_false_breach(
     sample_result: PlanReadResult,
 ) -> None:
-    report = calculate(sample_result.plan, [_v4_with_shareholder_loan()], [])
+    report = calculate(
+        sample_result.plan, [_v4_with_shareholder_loan()], [], tight_ratio=TIGHT_RATIO
+    )
     r = by_id(report)["V4-DVG"]
     assert (r.value_rounded, r.status) == (D("3.57"), "breached")
 
@@ -215,7 +220,7 @@ def test_trap_fact_false_includes_shareholder_loan(
     assert plan is not None
     fact = plan.facts[FactKey.QUALIFIED_SUBORDINATION].model_copy(update={"value": False})
     plan = plan.model_copy(update={"facts": {**plan.facts, FactKey.QUALIFIED_SUBORDINATION: fact}})
-    r = by_id(calculate(plan, gold_profiles, []))["V4-DVG"]
+    r = by_id(calculate(plan, gold_profiles, [], tight_ratio=TIGHT_RATIO))["V4-DVG"]
     assert (r.value_rounded, r.status) == (D("3.57"), "breached")
     assert r.alternatives == []  # the fact is clear (not ambiguous): no alternative
 
@@ -229,7 +234,7 @@ def test_gold_profile_gives_337(report: Report) -> None:
 
 def _run(path: Path, profiles: list[ContractProfile]) -> Report:
     result = read_plan(path)
-    return calculate(result.plan, profiles, result.findings)
+    return calculate(result.plan, profiles, result.findings, tight_ratio=TIGHT_RATIO)
 
 
 def test_plan_no_financing_only_dscr_not_computable(

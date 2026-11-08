@@ -26,6 +26,7 @@ from mailkit import (
     GOLD_PROFILES,
     MATERIAL,
     SAMPLE,
+    TIGHT_RATIO,
     fixture_mails,
     llm_returning,
     llm_unavailable,
@@ -40,7 +41,12 @@ def report() -> Report:
     profiles, findings = load_profiles(GOLD_PROFILES, MATERIAL)
     plan = read_plan(SAMPLE)
     return calculate(
-        plan.plan, profiles, plan.findings, profile_findings=findings, file=SAMPLE.name
+        plan.plan,
+        profiles,
+        plan.findings,
+        tight_ratio=TIGHT_RATIO,
+        profile_findings=findings,
+        file=SAMPLE.name,
     )
 
 
@@ -55,7 +61,9 @@ def _no_llm(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def _result(report: Report, inbound) -> tuple[render.Context, Any]:  # type: ignore[no-untyped-def]
-    ctx = render.result_context(report, inbound=inbound, extra_findings=[], run_id=RUN_ID)
+    ctx = render.result_context(
+        report, inbound=inbound, extra_findings=[], run_id=RUN_ID, tight_ratio=TIGHT_RATIO
+    )
     d = render.draft(ctx, inbound=inbound, workflow_id=inbound.message_id, seq=1,
                      from_addr="finn.box@example.com")  # fmt: skip
     return ctx, d
@@ -218,7 +226,9 @@ def test_partial_variant(report: Report, inbound) -> None:  # type: ignore[no-un
         update={"results": [broken if r is dscr else r for r in report.results],
                 "overall": "incomplete"}
     )  # fmt: skip
-    ctx = render.result_context(partial, inbound=inbound, extra_findings=[], run_id=RUN_ID)
+    ctx = render.result_context(
+        partial, inbound=inbound, extra_findings=[], run_id=RUN_ID, tight_ratio=TIGHT_RATIO
+    )
     html, text = render.render(ctx)
     assert "3 von 4 Financial Covenants eingehalten; nicht berechenbar" in text
     assert f"² gem. Vertrag 3, § 13 Abs. 1 S. 5 – nicht berechenbar: {reason}" in text
@@ -240,7 +250,9 @@ def test_alternative_assumption_in_lead(report: Report, inbound) -> None:  # typ
     rep = report.model_copy(
         update={"results": [breached if r is dvg else r for r in report.results]}
     )
-    ctx = render.result_context(rep, inbound=inbound, extra_findings=[], run_id=RUN_ID)
+    ctx = render.result_context(
+        rep, inbound=inbound, extra_findings=[], run_id=RUN_ID, tight_ratio=TIGHT_RATIO
+    )
     lead = " ".join(ctx.summary)
     assert "hängt an einer im Plan nicht eindeutig belegten Annahme" in lead
     assert "ohne Gesellschafterdarlehen: 3,37 (eingehalten)" in lead

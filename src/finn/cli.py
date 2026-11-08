@@ -103,7 +103,7 @@ def check(
     loaded, profile_findings = load_profiles(directory, settings.contracts_dir)
     result = read_plan(path)
     report = calculate(
-        result.plan, loaded, result.findings, settings,
+        result.plan, loaded, result.findings, tight_ratio=settings.tight_headroom_ratio,
         profile_findings=profile_findings, file=path.name,
     )  # fmt: skip
     typer.echo(report.model_dump_json(indent=2) if as_json else render_report(report))
@@ -301,7 +301,7 @@ def contracts_eval(
     passed = sum(e.passed for e in results)
     total = sum(len(e.checks) for e in results)
     typer.echo(f"Gesamt: {passed}/{total} Prüfpunkte ({passed / total:.0%})" if total else "")
-    key = answer_key_checks(extracted, plan)
+    key = answer_key_checks(extracted, plan, tight_ratio=get_settings().tight_headroom_ratio)
     typer.echo("\n".join(c.line() for c in key))
     if not all(c.ok for c in key):
         raise typer.Exit(code=1)

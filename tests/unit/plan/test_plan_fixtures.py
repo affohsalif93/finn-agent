@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from finn.errors import ErrorCode, Finding, Severity, has_blocking
+from finn.errors import ErrorCode, Finding, Severity, stopping
 from finn.models.plan import FactKey, ItemKey, Plan
 from finn.plan import PlanReadResult, read_plan
 
@@ -35,7 +35,7 @@ def test_variant_reads_like_sample(
 ) -> None:
     result = _read(plan_fixtures, name)
     assert _values(result.plan) == _values(sample_result.plan)
-    assert not has_blocking(result.findings)
+    assert not stopping(result.findings)
     assert result.plan is not None
     assert sample_result.plan is not None
     facts = {k: (f.value, f.ambiguous) for k, f in result.plan.facts.items()}

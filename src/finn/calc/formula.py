@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 
 from finn.models.result import Trace, Used
-from finn.numbers import format_de
+from finn.numbers import number_de
 
 EXPAND_MAX = 3
 
@@ -19,14 +19,6 @@ EXPAND_MAX = 3
 class Term:
     weight: Decimal
     value: Decimal
-
-
-def number_de(value: Decimal, max_decimals: int = 2) -> str:
-    """German format with only the decimals the value needs (148.200 · 0,5 · 1,30)."""
-    normal = value.normalize()
-    exponent = normal.as_tuple().exponent
-    decimals = max(0, -exponent) if isinstance(exponent, int) else 0
-    return format_de(value, min(decimals, max_decimals))
 
 
 def _leaves(trace: Used, weight: Decimal) -> list[Term]:

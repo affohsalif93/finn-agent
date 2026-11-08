@@ -13,6 +13,7 @@ from finn.errors import ErrorCode
 from finn.models.contract import ContractProfile
 from finn.models.plan import LoanLine, Plan
 from finn.plan import PlanReadResult
+from mailkit import TIGHT_RATIO
 
 ROOT = Path(__file__).resolve().parents[3]
 SAMPLE = ROOT / "material" / "Wirtschaftsplan_2027.xlsx"
@@ -43,7 +44,9 @@ def test_loan_matching_without_numbers_and_ambiguity(
     assert sample_result.plan is not None
     loans = [ln.model_copy(update={"loan_number": None}) for ln in sample_result.plan.loans]
     loans[3] = loans[3].model_copy(update={"label": "Konsortialkredit Sparkasse Musterstadt"})
-    report = calculate(_replace_loans(sample_result.plan, loans), gold_profiles, [])
+    report = calculate(
+        _replace_loans(sample_result.plan, loans), gold_profiles, [], tight_ratio=TIGHT_RATIO
+    )
     ambiguous = [f for f in report.findings if f.code is ErrorCode.PLAN_LOAN_AMBIGUOUS]
     assert len(ambiguous) == 1
     assert "V1, V4" in ambiguous[0].message_de
@@ -56,7 +59,9 @@ def test_repayment_differs_and_contract_missing(
     loans = list(sample_result.plan.loans)
     loans[1] = loans[1].model_copy(update={"scheduled_repayment": Decimal(1400)})  # V2: 1.500
     del loans[2]  # V3 line
-    report = calculate(_replace_loans(sample_result.plan, loans), gold_profiles, [])
+    report = calculate(
+        _replace_loans(sample_result.plan, loans), gold_profiles, [], tight_ratio=TIGHT_RATIO
+    )
     differs = next(f for f in report.findings if f.code is ErrorCode.PLAN_REPAYMENT_DIFFERS)
     assert "1.400" in differs.message_de
     assert "1.500" in differs.message_de
@@ -70,7 +75,7 @@ def test_company_mismatch_blocks(
 ) -> None:
     assert sample_result.plan is not None
     plan = sample_result.plan.model_copy(update={"company": "Stadtwerke Andersstadt GmbH"})
-    report = calculate(plan, gold_profiles, [])
+    report = calculate(plan, gold_profiles, [], tight_ratio=TIGHT_RATIO)
     assert {r.status for r in report.results} == {"not_computable"}
     assert report.findings[0].code is ErrorCode.PLAN_COMPANY_MISMATCH
 
@@ -78,12 +83,14 @@ def test_company_mismatch_blocks(
 def test_contract_filter(
     sample_result: PlanReadResult, gold_profiles: list[ContractProfile]
 ) -> None:
-    report = calculate(sample_result.plan, gold_profiles, [], contract_filter={"V3"})
+    report = calculate(
+        sample_result.plan, gold_profiles, [], tight_ratio=TIGHT_RATIO, contract_filter={"V3"}
+    )
     assert [r.covenant_id for r in report.results] == ["V3-DSCR"]
 
 
 def test_no_plan(gold_profiles: list[ContractProfile]) -> None:
-    report = calculate(None, gold_profiles, [])
+    report = calculate(None, gold_profiles, [], tight_ratio=TIGHT_RATIO)
     assert (report.header, report.results, report.overall) == (None, [], "incomplete")
 
 

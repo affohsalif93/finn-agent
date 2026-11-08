@@ -25,15 +25,25 @@ from typing import Any, Literal
 from jinja2 import Environment, FileSystemLoader, StrictUndefined, select_autoescape
 from pydantic import BaseModel, ConfigDict
 
-from finn.calc.formula import number_de
-from finn.calc.render import headroom_de, met_de, threshold_de, value_de
-from finn.errors import ErrorCode, Finding, Severity, finding
+from finn.errors import ErrorCode, Finding, Severity, finding, stopping
 from finn.llm import client
 from finn.mail.thread import reply_references, reply_subject
 from finn.models.mail import InboundMessage, ReplyDraft, ReplyKind
 from finn.models.result import CheckedInput, ContractNote, CovenantResult, Report
+from finn.numbers import number_de, unit_suffix
 from finn.reply import paths as rw
 from finn.reply.number_check import allowed_values, unknown_numbers
+from finn.wording import (
+    alt_status_de,
+    headroom_de,
+    limit_de,
+    met_de,
+    minus,
+    plan_status_de,
+    strip_parenthetical,
+    threshold_de,
+    value_de,
+)
 
 TEMPLATES = Path(__file__).parent / "templates"
 FOOTER_DETERMINISTIC = (
@@ -175,7 +185,7 @@ def _summary(report: Report) -> list[str]:
     tight = next((r for r in results if r.covenant_id == report.tightest), None)
     if tight is not None and tight.threshold is not None and tight.headroom is not None:
         bound = "min." if tight.operator == ">=" else "max."
-        limit = threshold_de(tight).split(" ", 1)[1]
+        limit = limit_de(tight)
         room = headroom_de(tight).lstrip("-")
         how = f"verfehlt um {room}" if tight.status == "breached" else f"Spielraum {room}"
         out.append(
@@ -187,14 +197,10 @@ def _summary(report: Report) -> list[str]:
     for r in results:
         changed = [a for a in r.alternatives if a.status != r.status]
         for alt in changed:
-            word_alt = {"met": "eingehalten", "breached": "nicht eingehalten"}.get(
-                alt.status, "nicht berechenbar"
-            )
-            pct = " %" if r.unit == "percent" else ""
             out.append(
                 f"{r.name_de} ({r.contract_name_de}) hängt an einer im Plan nicht eindeutig "
-                f"belegten Annahme; {alt.assumption_de}: "
-                f"{number_de(alt.value_rounded)}{pct} ({word_alt})."
+                f"belegten Annahme; {alt.assumption_de}: {number_de(alt.value_rounded)}"
+                f"{unit_suffix(r.unit)} ({alt_status_de(alt.status)})."
             )
     return out
 
@@ -217,7 +223,7 @@ def _note_head(text: str) -> tuple[str, str]:
     head, sep, rest = text.partition(": ")
     if not sep or len(head) > 70:
         return "", text
-    return re.sub(r"\s*\([^)]*\)$", "", head), rest
+    return strip_parenthetical(head), rest
 
 
 def _short_note(note: ContractNote, rest: str) -> str:
@@ -272,7 +278,7 @@ def _plan_footnote(report: Report) -> str:
     if sheets:
         text += f" ({', '.join(sheets)})"
     if h is not None:
-        status = "Entwurf" if h.status == "draft" else "beschlossen"
+        status = plan_status_de(h.status)
         version = f" vom {h.version_date:%d.%m.%Y}" if h.version_date else ""
         text += (
             f" · {h.company or '–'} · Plan {h.plan_year} ({status}{version}) · Stichtag "
@@ -287,7 +293,7 @@ def result_context(
     inbound: InboundMessage,
     extra_findings: Sequence[Finding],
     run_id: str,
-    tight_ratio: Decimal = Decimal("0.10"),
+    tight_ratio: Decimal,
 ) -> Context:
     h = report.header
     general = [f for f in [*extra_findings, *report.findings] if not f.affects]
@@ -302,7 +308,7 @@ def result_context(
                 mark=rw.mark(n),
                 value=value_de(r),
                 threshold=threshold_de(r),
-                headroom=headroom_de(r).replace("-", "−"),
+                headroom=minus(headroom_de(r)),
                 met=met_de(r),
                 status=_status_key(r),
                 anchor=rw.anchor(r),
@@ -376,7 +382,7 @@ def block_context(
     header: CheckedInput | None,
     wait_days: float,
 ) -> Context:
-    shown = [f for f in findings if f.severity in (Severity.BLOCK, Severity.ASK)] or list(findings)
+    shown = stopping(findings) or list(findings)
     name = file or "im Anhang"
     return Context(
         kind="block",

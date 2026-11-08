@@ -13,6 +13,7 @@ from finn.contracts.selftest import check_examples
 from finn.contracts.store import load_profiles
 from finn.errors import ErrorCode
 from finn.plan import PlanReadResult
+from mailkit import TIGHT_RATIO
 
 ROOT = Path(__file__).resolve().parents[3]
 GOLD = ROOT / "tests" / "fixtures" / "profiles_gold"
@@ -115,7 +116,9 @@ def test_bad_ref_makes_only_that_covenant_manual_review(
     assert [f.affects for f in findings if f.code is ErrorCode.PROFILE_INVALID_RECIPE] == [
         ["V4-DVG"]
     ]
-    report = calculate(sample_result.plan, profiles, [], profile_findings=findings)
+    report = calculate(
+        sample_result.plan, profiles, [], tight_ratio=TIGHT_RATIO, profile_findings=findings
+    )
     status = {r.covenant_id: r.status for r in report.results}
     assert status == {"V4-EKQ": "met", "V4-DVG": "manual_review"}
     assert report.overall == "incomplete"
@@ -138,7 +141,9 @@ def test_unmapped_manual_review_blocks_the_covenant(
         d["definitions"]["financial_debt"]["unmapped_components"][0]["effect"] = "manual_review"
 
     profiles, findings = load_profiles(_profiles_dir(tmp_path, edit=edit), MATERIAL)
-    report = calculate(sample_result.plan, profiles, [], profile_findings=findings)
+    report = calculate(
+        sample_result.plan, profiles, [], tight_ratio=TIGHT_RATIO, profile_findings=findings
+    )
     dvg = next(r for r in report.results if r.covenant_id == "V4-DVG")
     assert dvg.status == "manual_review"
     assert any(f.code is ErrorCode.PROFILE_UNMAPPED for f in dvg.findings)

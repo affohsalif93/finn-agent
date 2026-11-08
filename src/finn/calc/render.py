@@ -1,52 +1,11 @@
 """Plain-text view of a `Report` for `finn check` (German)."""
 
 from collections.abc import Sequence
-from decimal import Decimal
 
-from finn.calc.formula import number_de
 from finn.models.result import AssumedZero, CovenantResult, Excluded, Report, Trace, Used
-from finn.numbers import format_de
+from finn.numbers import number_de
 from finn.plan.render import text_table
-
-_STATUS_DE = {
-    "met": "ja",
-    "breached": "nein",
-    "not_computable": "nicht berechenbar",
-    "manual_review": "manuelle Prüfung",
-}
-
-
-def _decimals(value: Decimal) -> int:
-    exponent = value.as_tuple().exponent
-    return max(0, -exponent) if isinstance(exponent, int) else 0
-
-
-def value_de(r: CovenantResult) -> str:
-    if r.value_rounded is None:
-        return "–"
-    text = format_de(r.value_rounded, r.decimals or 0)
-    return f"{text} %" if r.unit == "percent" else f"{text} T€" if r.unit == "amount" else text
-
-
-def threshold_de(r: CovenantResult) -> str:
-    if r.threshold is None:
-        return "–"
-    op = "≥" if r.operator == ">=" else "≤"
-    text = format_de(r.threshold, _decimals(r.threshold))
-    suffix = " %" if r.unit == "percent" else " T€" if r.unit == "amount" else ""
-    return f"{op} {text}{suffix}"
-
-
-def headroom_de(r: CovenantResult) -> str:
-    if r.headroom is None:
-        return "–"
-    text = format_de(r.headroom, r.decimals or 0)
-    return {"pp": f"{text} PP", "T€": f"{text} T€"}.get(r.headroom_unit, text)
-
-
-def met_de(r: CovenantResult) -> str:
-    text = _STATUS_DE[r.status]
-    return "ja (knapp)" if r.status == "met" and r.tight else text
+from finn.wording import headroom_de, met_de, minus, plan_status_de, threshold_de, value_de
 
 
 def _cells(refs: Sequence[object]) -> str:
@@ -66,7 +25,7 @@ def _trace_lines(traces: Sequence[Trace], indent: str) -> list[str]:
                 if t.weight == 1
                 else "− "
                 if t.weight == -1
-                else f"{number_de(t.weight).replace('-', '−')} × "
+                else f"{minus(number_de(t.weight))} × "
             )
             lines.append(f"{indent}{weight}{t.label_de} {number_de(t.value)}{_cells(t.refs)}")
             lines += _trace_lines(t.parts, indent + "    ")
@@ -86,7 +45,7 @@ def render_report(report: Report) -> str:
     h = report.header
     if h is not None:
         version = h.version_date.strftime("%d.%m.%Y") if h.version_date else "-"
-        status = "Entwurf" if h.status == "draft" else "beschlossen"
+        status = plan_status_de(h.status)
         lines += [
             f"Geprüfte Eingabe: {h.file or '-'} · {h.company or '-'} · Plan {h.plan_year} "
             f"({status} vom {version}) · Stichtag {h.reporting_date:%d.%m.%Y}",

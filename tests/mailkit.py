@@ -25,6 +25,7 @@ ROOT = Path(__file__).resolve().parents[1]
 MATERIAL = ROOT / "material"
 SAMPLE = MATERIAL / "Wirtschaftsplan_2027.xlsx"
 GOLD_PROFILES = ROOT / "tests" / "fixtures" / "profiles_gold"
+TIGHT_RATIO = Settings.model_fields["tight_headroom_ratio"].default
 
 FINN = "finn.box+finn@example.com"
 ACCOUNT = "finn.box@example.com"

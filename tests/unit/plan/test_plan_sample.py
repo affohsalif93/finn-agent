@@ -5,7 +5,7 @@ from decimal import Decimal
 
 import pytest
 
-from finn.errors import ErrorCode, Severity, has_blocking
+from finn.errors import ErrorCode, Severity, stopping
 from finn.models.plan import CellRef, FactKey, ItemKey, LoanFactKey, Plan
 from finn.plan import PlanReadResult
 
@@ -105,7 +105,7 @@ def test_loan_facts_note_4(plan: Plan) -> None:
 
 
 def test_findings_only_status(sample_result: PlanReadResult) -> None:
-    assert not has_blocking(sample_result.findings)
+    assert not stopping(sample_result.findings)
     assert [(f.code, f.severity) for f in sample_result.findings] == [
         (ErrorCode.PLAN_STATUS, Severity.INFO)
     ]

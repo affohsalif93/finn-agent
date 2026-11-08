@@ -15,7 +15,8 @@ from temporalio.common import RetryPolicy
 from temporalio.exceptions import ActivityError, ApplicationError, is_cancelled_exception
 
 with workflow.unsafe.imports_passed_through():
-    from finn.errors import Finding, Severity
+    from finn import runs
+    from finn.errors import Finding, Severity, stopping
     from finn.mail.thread import thread_id
     from finn.models.mail import InboundMessage, ParsedMessage, ReplyKind, SentRecord
     from finn.models.result import Report
@@ -55,7 +56,6 @@ _SEND = RetryPolicy(
     maximum_attempts=12,  # SMTP outage: ~1 h of retries, Temporal keeps the state
     non_retryable_error_types=NON_RETRYABLE,
 )
-_STOPPING = (Severity.BLOCK, Severity.ASK)
 
 
 @workflow.defn
@@ -105,8 +105,7 @@ class CovenantCheckWorkflow:
                     await self._reply("other", latest, wid, session, question=req.intent != "other")
                     return self._outcome("replied")
 
-                stops: list[Finding] = [f for f in classified.input.findings
-                                        if f.severity in _STOPPING]  # fmt: skip
+                stops: list[Finding] = stopping(classified.input.findings)
                 plan_file = classified.input.plan
                 kind: ReplyKind = "ask"
                 if classified.input.status == "ok" and plan_file is not None:
@@ -116,7 +115,7 @@ class CovenantCheckWorkflow:
                         start_to_close_timeout=timedelta(minutes=2),
                         retry_policy=_ONCE,
                     )
-                    stops = [f for f in plan_result.findings if f.severity in _STOPPING]
+                    stops = stopping(plan_result.findings)
                     if not stops:
                         report: Report = await workflow.execute_activity_method(
                             FinnActivities.calculate,
@@ -232,6 +231,6 @@ class CovenantCheckWorkflow:
                 "status": status,
                 "replies": self._replies,
                 "sent": self._sent,
-                "run_id": self._run_dir.replace("\\", "/").rstrip("/").rpartition("/")[2],
+                "run_id": runs.run_id(self._run_dir),
             }
         )

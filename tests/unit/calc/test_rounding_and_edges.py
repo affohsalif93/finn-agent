@@ -6,13 +6,15 @@ import pytest
 
 from finn.calc import rounding
 from finn.calc.engine import calculate
-from finn.calc.formula import Term, number_de, render_terms
+from finn.calc.formula import Term, render_terms
 from finn.calc.sensitivity import break_point, max_whole_drop
 from finn.errors import ErrorCode
 from finn.models.contract import ContractProfile
 from finn.models.plan import ItemKey, Plan
 from finn.models.result import CovenantResult
+from finn.numbers import number_de
 from finn.plan import PlanReadResult
+from mailkit import TIGHT_RATIO
 
 D = Decimal
 
@@ -63,7 +65,7 @@ def _set(plan: Plan, **values: str) -> Plan:
 
 
 def _result(plan: Plan, profiles: list[ContractProfile], covenant: str) -> CovenantResult:
-    report = calculate(plan, profiles, [])
+    report = calculate(plan, profiles, [], tight_ratio=TIGHT_RATIO)
     return next(r for r in report.results if r.covenant_id == covenant)
 
 

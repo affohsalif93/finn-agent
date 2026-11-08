@@ -16,8 +16,7 @@ from finn.calc.evaluator import ConditionUse, Evaluation, Inputs, evaluate, loan
 from finn.calc.formula import formula_de
 from finn.calc.recipe import Dependencies, dependencies, iter_components
 from finn.calc.sensitivity import break_point, max_whole_drop
-from finn.config import Settings
-from finn.errors import ErrorCode, Finding, Severity, finding
+from finn.errors import STOPPING, ErrorCode, Finding, Severity, finding
 from finn.models.contract import ContractProfile, Covenant, Loan, PricingGrid, Source, Unmapped
 from finn.models.plan import FactKey, ItemKey, LoanFactKey, LoanLine, Plan
 from finn.models.result import (
@@ -32,28 +31,27 @@ from finn.models.result import (
     Trace,
     Used,
 )
-from finn.numbers import format_de
+from finn.numbers import format_de, format_value, significant_decimals
 from finn.plan import checks
 from finn.plan.labels import label_de, normalise, normalise_loan_number
 
-DEFAULT_TIGHT_RATIO = Decimal("0.10")
 AltStatus = Literal["met", "breached", "not_computable"]
 Driver = Literal["ebitda", "equity"]
-_STOPPING = (Severity.BLOCK, Severity.ASK, Severity.PARTIAL)
+_NOT_COMPUTABLE = STOPPING | {Severity.PARTIAL}  # findings that stop one covenant
 
 
 def calculate(
     plan: Plan | None,
     profiles: Sequence[ContractProfile],
     plan_findings: Sequence[Finding],
-    settings: Settings | None = None,
     *,
+    tight_ratio: Decimal,
     profile_findings: Sequence[Finding] = (),
     file: str | None = None,
     contract_filter: Collection[str] | None = None,
 ) -> Report:
-    """Evaluate every covenant of every profile against the plan."""
-    ratio = settings.tight_headroom_ratio if settings else DEFAULT_TIGHT_RATIO
+    """Evaluate every covenant of every profile against the plan; `tight_ratio`: headroom below
+    this share of the limit counts as tight."""
     chosen = [p for p in profiles if not contract_filter or p.contract_id in contract_filter]
     if plan is None:
         findings = [*plan_findings, *profile_findings]
@@ -77,7 +75,7 @@ def calculate(
         for cov in profile.covenants:
             own = [f for f in general if f.affects == "all" or cov.covenant_id in f.affects]
             dep = deps[(profile.contract_id, cov.covenant_id)]
-            results.append(_covenant(profile, cov, plan, own, dep, ratio))
+            results.append(_covenant(profile, cov, plan, own, dep, tight_ratio))
         own_results = [r for r in results if r.contract_id == profile.contract_id]
         notes.extend(_contract_notes(profile, own_results))
     header = CheckedInput(
@@ -107,7 +105,7 @@ def profile_hash(profile: ContractProfile) -> str:
 def _with_affects(f: Finding, deps: dict[tuple[str, str], Dependencies]) -> Finding:
     if f.affects == "all" or f.affects:
         return f
-    if f.severity in (Severity.BLOCK, Severity.ASK):
+    if f.severity in STOPPING:
         return f.model_copy(update={"affects": "all"})
     hit = [cov for (_, cov), d in deps.items() if d.keys & set(f.items)]
     return f.model_copy(update={"affects": hit}) if hit else f
@@ -166,9 +164,9 @@ def _covenant(
             affects=[cov.covenant_id],
         )
         return _stop(base, "manual_review", [f])
-    stopping = [f for f in own if f.severity in _STOPPING]
-    if stopping:
-        return _stop(base, "not_computable", stopping)
+    stops = [f for f in own if f.severity in _NOT_COMPUTABLE]
+    if stops:
+        return _stop(base, "not_computable", stops)
     if base.threshold is None:
         return base.model_copy(update={"reason": f"kein Grenzwert für {plan.plan_year}"})
     return _evaluate(ctx, base)
@@ -253,7 +251,7 @@ def _evaluate(ctx: _Ctx, base: CovenantResult) -> CovenantResult:
             finding(
                 ErrorCode.CALC_AT_THRESHOLD,
                 covenant=ctx.name,
-                value=_fmt_value(rounded, cov.unit, decimals),
+                value=format_value(rounded, cov.unit, decimals),
                 affects=[cov.covenant_id],
             )
         )
@@ -285,11 +283,6 @@ def _status(value: Decimal | None, ctx: _Ctx, threshold: Decimal) -> AltStatus:
     if value is None:
         return "not_computable"
     return "met" if rounding.is_met(value, ctx.cov.operator, threshold) else "breached"
-
-
-def _fmt_value(value: Decimal, unit: str, decimals: int) -> str:
-    text = format_de(value, decimals)
-    return f"{text} %" if unit == "percent" else f"{text} T€" if unit == "amount" else text
 
 
 # ── findings derived during evaluation ───────────────────────────────────────
@@ -405,7 +398,7 @@ def _alternatives(
                 covenant=ctx.name,
                 label=loan.label,
                 year=ctx.plan.plan_year,
-                value=_fmt_value(alt_value, unit, decimals),
+                value=format_value(alt_value, unit, decimals),
                 items=[ItemKey.SCHEDULED_REPAYMENTS_TOTAL],
                 affects=[ctx.cov.covenant_id],
             )
@@ -518,9 +511,9 @@ def _sensitivity_text(
     threshold: Decimal,
 ) -> str:
     unit, cov = ctx.cov.unit, ctx.cov
-    limit = _fmt_value(threshold, unit, rounding.effective_decimals(cov.rounding.decimals))
+    limit = format_value(threshold, unit, rounding.effective_decimals(cov.rounding.decimals))
     if cov.unit == "percent":
-        limit = f"{format_de(threshold, max(1, _decimals_of(threshold)))} %"
+        limit = f"{format_de(threshold, max(1, significant_decimals(threshold)))} %"
     verb = "überschreitet" if cov.operator == "<=" else "unterschreitet"
     ceteris = " (übrige Werte unverändert, Bilanzsumme gleich)" if label == "Eigenkapital" else ""
     if drop < 0:
@@ -532,13 +525,8 @@ def _sensitivity_text(
         f"Das {label} ({format_de(base, 0)} T€) darf um bis zu {format_de(drop, 0)} T€ "
         f"({format_de(pct, 1)} %) sinken{ceteris}, bevor „{cov.name_in_contract}“ die Grenze "
         f"von {limit} {verb}; bei {format_de(drop + 1, 0)} T€ weniger: "
-        f"{_fmt_value(after, unit, decimals)}."
+        f"{format_value(after, unit, decimals)}."
     )
-
-
-def _decimals_of(value: Decimal) -> int:
-    exponent = value.normalize().as_tuple().exponent
-    return max(0, -exponent) if isinstance(exponent, int) else 0
 
 
 # ── report-level ─────────────────────────────────────────────────────────────
@@ -551,7 +539,7 @@ def _overall(
         return "some_breached"
     incomplete = any(r.status in ("not_computable", "manual_review") for r in results)
     lost = any(f.code in (ErrorCode.PROFILE_MISSING, ErrorCode.PROFILE_INVARIANT) for f in findings)
-    if incomplete or lost or (not results and any(f.severity in _STOPPING for f in findings)):
+    if incomplete or lost or (not results and any(f.severity in _NOT_COMPUTABLE for f in findings)):
         return "incomplete"
     return "all_met"
 

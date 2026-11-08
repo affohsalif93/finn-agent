@@ -329,14 +329,16 @@ def _show(x: object) -> str:
 # ── Answer key with the extracted profiles ───────────────────────────────────
 
 
-def answer_key_checks(profiles: Sequence[ContractProfile], plan_path: Path) -> list[Check]:
+def answer_key_checks(
+    profiles: Sequence[ContractProfile], plan_path: Path, *, tight_ratio: Decimal
+) -> list[Check]:
     """Run the calc engine with `profiles` on the sample plan; compare with the answer key."""
     from finn.calc.engine import calculate
     from finn.contracts.selftest import example_value
     from finn.plan import read_plan
 
     result = read_plan(plan_path)
-    report = calculate(result.plan, list(profiles), result.findings)
+    report = calculate(result.plan, list(profiles), result.findings, tight_ratio=tight_ratio)
     checks: list[Check] = []
     for (cid, metric), expected in ANSWER_KEY.items():
         r = next(

@@ -6,6 +6,7 @@ from typing import Any
 
 from finn.contracts.eval import Check, answer_key_checks, compare, evaluate_dirs, flatten
 from finn.models.contract import ContractProfile
+from mailkit import TIGHT_RATIO
 
 SAMPLE = Path(__file__).resolve().parents[3] / "material" / "Wirtschaftsplan_2027.xlsx"
 
@@ -90,7 +91,7 @@ def test_v1_with_a_covenant_and_missing_profile(gold_profiles: list[ContractProf
 
 
 def test_answer_key_with_gold_profiles(gold_profiles: list[ContractProfile]) -> None:
-    checks = answer_key_checks(gold_profiles, SAMPLE)
+    checks = answer_key_checks(gold_profiles, SAMPLE, tight_ratio=TIGHT_RATIO)
     assert [c.name for c in checks if not c.ok] == []
     assert len(checks) == 6  # 4 covenants + V1 + V3 example
 
@@ -105,6 +106,10 @@ def test_answer_key_detects_a_wrong_recipe(gold_profiles: list[ContractProfile])
 
     profiles = [p for p in gold_profiles if p.contract_id != "V4"]
     profiles.append(mutate(v4, include_loan))
-    failing = {c.name: c.actual for c in answer_key_checks(profiles, SAMPLE) if not c.ok}
+    failing = {
+        c.name: c.actual
+        for c in answer_key_checks(profiles, SAMPLE, tight_ratio=TIGHT_RATIO)
+        if not c.ok
+    }
     assert list(failing) == ["Antwortschlüssel V4 net_debt_to_ebitda"]
     assert failing["Antwortschlüssel V4 net_debt_to_ebitda"].startswith("3.57")

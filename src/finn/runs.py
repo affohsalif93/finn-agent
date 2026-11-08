@@ -14,6 +14,8 @@ from typing import Any
 
 from pydantic import BaseModel
 
+from finn.models.mail import SentRecord
+
 
 def msgid_hash(message_id: str, n: int = 12) -> str:
     return hashlib.sha256(message_id.strip("<>").encode()).hexdigest()[:n]
@@ -85,5 +87,18 @@ def write_error(run_dir: Path | str, text: str) -> None:
         f.write(f"--- {stamp}\n{text}\n")
 
 
+def write_reply(run_dir: Path | str, seq: int, kind: str, html: str, text: str) -> None:
+    """`reply-<seq>-<kind>.html|txt` per reply, `reply.html|txt` = the latest."""
+    base = Path(run_dir)
+    for name in (f"reply-{seq}-{kind}", "reply"):
+        (base / f"{name}.html").write_text(html, encoding="utf-8")
+        (base / f"{name}.txt").write_text(text, encoding="utf-8")
+
+
 def sent_marker(run_dir: Path | str, message_id: str) -> Path:
     return Path(run_dir) / "sent" / f"{msgid_hash(message_id, 24)}.json"
+
+
+def write_sent_marker(run_dir: Path | str, record: SentRecord) -> Path:
+    marker = sent_marker(run_dir, record.message_id)
+    return write_json(marker.parent, marker.name, record)

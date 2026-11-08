@@ -56,3 +56,29 @@ def format_de(value: Decimal, decimals: int = 0, unit: str | None = None) -> str
     text = f"{quantized:,.{decimals}f}".replace(",", "\x00").replace(".", ",")
     text = text.replace("\x00", ".")
     return f"{text} {unit}" if unit else text
+
+
+def printed_decimals(value: Decimal) -> int:
+    """Decimals as the value is written: `Decimal("1.50")` → 2."""
+    exponent = value.as_tuple().exponent
+    return max(0, -exponent) if isinstance(exponent, int) else 0
+
+
+def significant_decimals(value: Decimal) -> int:
+    """Decimals the value needs: `Decimal("1.50")` → 1, `Decimal("100")` → 0."""
+    return printed_decimals(value.normalize())
+
+
+def number_de(value: Decimal, max_decimals: int = 2) -> str:
+    """German format with only the decimals the value needs (148.200 · 0,5 · 1,3)."""
+    return format_de(value, min(significant_decimals(value), max_decimals))
+
+
+def unit_suffix(unit: str) -> str:
+    """Suffix of a covenant value: " %" (percent), " T€" (amount), none for a ratio."""
+    return " %" if unit == "percent" else " T€" if unit == "amount" else ""
+
+
+def format_value(value: Decimal, unit: str, decimals: int) -> str:
+    """A covenant value with its unit, e.g. "34,32 %", "3,37", "1.200 T€"."""
+    return format_de(value, decimals) + unit_suffix(unit)
