@@ -30,3 +30,7 @@ tests/fixtures/plans/
 
 # Contract onboarding cache (PDF page texts by sha256)
 data/.cache/
+
+# AWS CDK (aws/): synth output; context cache holds the account ID + pinned AMI
+aws/cdk.out/
+aws/cdk.context.json

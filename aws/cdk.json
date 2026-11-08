@@ -1,0 +1,5 @@
+{
+  "app": "uv run --frozen python app.py",
+  "watch": {"include": ["**"], "exclude": ["cdk.out", ".venv", "tests"]},
+  "context": {}
+}

@@ -1,0 +1,22 @@
+[project]
+# Separate uv project on purpose: aws-cdk-lib (~100 MB incl. the jsii runtime) stays out of the
+# root uv.lock, the runtime image and CI. Use: `uv run --project aws ...` (ARCHITECTURE §13.4).
+name = "finn-aws"
+version = "0.1.0"
+description = "AWS CDK stack FinnDemo: one EC2 instance running Finn's compose stack"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "aws-cdk-lib==2.274.0",
+    "constructs>=10.4,<11",
+]
+
+[dependency-groups]
+dev = ["pytest>=9.2"]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra --strict-markers"

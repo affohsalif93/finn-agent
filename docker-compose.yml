@@ -18,6 +18,9 @@ x-finn: &finn
       condition: service_healthy
   restart: unless-stopped
   init: true              # forwards SIGTERM to finn, reaps zombies
+  logging: &logging       # rotate container logs (long-running on a small VM)
+    driver: json-file
+    options: {max-size: 10m, max-file: "3"}
 
 services:
   temporal:
@@ -41,6 +44,7 @@ services:
       retries: 12
       start_period: 10s
     restart: unless-stopped
+    logging: *logging
 
   finn-worker:
     <<: *finn

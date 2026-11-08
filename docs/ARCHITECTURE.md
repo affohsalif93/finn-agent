@@ -920,3 +920,14 @@ Reasons: contracts don't change during the demo; a human review is required (her
 - **CI:** GitHub Actions on every push: `ruff check`, `ruff format --check`, `mypy`, `pytest` (LLM mocked, no secrets needed).
 - **Production:** self-hosted Temporal with Postgres, or Temporal Cloud with client-side payload encryption; EU hosting; secrets in a secret store. See [ROADMAP.md](ROADMAP.md).
 
+### 13.4 Deployment (AWS)
+Stack `FinnDemo` (CDK Python, `aws/`, own uv project) in eu-central-1: one EC2 `t3.small` (Ubuntu 24.04, 25 GB gp3, IMDSv2) in its own VPC with one public subnet, no NAT; security group without inbound rules, access via SSM Session Manager only. Code arrives as an S3 asset of the repo (no `.env`, no runs, no tests/docs); the secrets as one SSM SecureString `/finn/demo/env` that CDK only references by name. At first boot the user data installs Docker (+ buildx, compose) and the AWS CLI, writes `/usr/local/bin/finn-deploy` and runs it: fetch asset + `.env` (`chmod 600`) to `/opt/finn`, `docker compose up -d --build temporal finn-worker finn-poller`; log `/var/log/finn-bootstrap.log`. Docker starts at boot and `restart: unless-stopped` brings the stack back. A `cdk deploy` with changed code updates the asset URL parameter and runs `finn-deploy` via SSM Run Command (no instance replacement, Temporal state is kept).
+```
+uv run --no-project python aws/put_env.py                      # .env → SSM (values never printed)
+cd aws && npx -y aws-cdk@2.1146.1 deploy --require-approval never
+aws/status.ps1 | aws/logs.ps1 finn-poller | aws/redeploy.ps1   # .sh on Linux/macOS, via SSM
+aws ssm start-session --target <InstanceId> --document-name AWS-StartPortForwardingSession \
+  --parameters portNumber=8233,localPortNumber=8233 --region eu-central-1   # Temporal UI
+cd aws && npx -y aws-cdk@2.1146.1 destroy -f && aws ssm delete-parameter --name /finn/demo/env --region eu-central-1
+```
+Only one poller may watch the Gmail label: stop the local one first (`docker compose stop finn-poller finn-worker`).
