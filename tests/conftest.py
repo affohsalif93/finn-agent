@@ -59,3 +59,21 @@ def gold_profiles() -> list[ContractProfile]:
     profiles, findings = load_profiles(GOLD_PROFILES, MATERIAL)
     assert findings == [], findings
     return profiles
+
+
+def pytest_addoption(parser: pytest.Parser) -> None:
+    """Options of the live mail tests (`tests/live`, marker `mailserver`)."""
+    group = parser.getgroup("finn-live", "Finn live mail tests (pytest -m mailserver)")
+    group.addoption(
+        "--real-llm",
+        action="store_true",
+        help="use OpenAI (OPENAI_API_KEY from .env) instead of the deterministic stand-in",
+    )
+    group.addoption(
+        "--mail-driver",
+        choices=("inprocess", "compose"),
+        default="inprocess",
+        help="inprocess: worker + poller in pytest (Temporal test server); "
+        "compose: the finn-*-testmail containers",
+    )
+    group.addoption("--case", action="append", default=[], help="run only these cases (repeatable)")

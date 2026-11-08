@@ -2,39 +2,8 @@
 {{ salutation }}
 
 {{ intro }}
-{% if items %}
-
-{% for item in items %}
-- {{ item }}
-{% endfor %}
-{% endif %}
-{% if checked %}
-
-GEPRÜFTE EINGABE
-{% for line in checked %}
-{{ line }}
-{% endfor %}
-{% if input_status %}
-{{ input_status }}
-{% endif %}
-{% endif %}
-{% if warnings %}
-
-Achtung:
-{% for w in warnings %}
-- {{ w }}
-{% endfor %}
-{% endif %}
-{% if infos %}
-
-Hinweise zur Eingabe:
-{% for i in infos %}
-- {{ i }}
-{% endfor %}
-{% endif %}
 {% if summary %}
 
-ERGEBNIS
 {% for s in summary %}
 {{ s }}
 {% endfor %}
@@ -42,54 +11,52 @@ ERGEBNIS
 {{ early_warning }}
 {% endif %}
 {% endif %}
+{% if items %}
+
+{% for item in items %}
+- {{ item }}
+{% endfor %}
+{% endif %}
 {% if rows %}
 
-ÜBERSICHT
 {{ text_table(table_headers, rows) }}
 {% endif %}
-{% if paths %}
+{% if footnotes %}
 
-RECHENWEG
-{% for p in paths %}
-
-{{ p.title }}: {{ p.status }}
-{% if p.source %}
-  Vertrag: {{ p.source }}
-{% endif %}
-{% if p.more_sources %}
-  {{ p.more_sources }}
-{% endif %}
-{% if p.formula %}
-  {{ p.formula }}
-{% endif %}
-{% for s in p.sub_formulas %}
-  {{ s }}
-{% endfor %}
-{% for l in p.lines %}
-  {{ "    " * l.level }}{{ l.text }}
-{% endfor %}
-{% for n in p.notes %}
-  {{ n }}
-{% endfor %}
+{% for f in footnotes %}
+{{ f }}
 {% endfor %}
 {% endif %}
 {% if notes %}
 
-HINWEISE
+Hinweise
 {% for n in notes %}
 - {{ n }}
 {% endfor %}
 {% endif %}
-{% if closing %}
+{% if paths %}
 
-{% for c in closing %}
-{{ c }}
+Rechenweg und Quellen
+Je Covenant mit Vertragsstelle, Formel und Eingangswerten, siehe unten.
+{% for b in paths %}
+
+{{ path_text(b) }}
 {% endfor %}
+{% for e in ebitda %}
+
+{{ ebitda_text(e) }}
+{% endfor %}
+{% endif %}
+{% if next_step %}
+
+{{ ("So geht es weiter: " if kind != "result" else "") ~ next_step }}
 {% endif %}
 
 Mit freundlichen Grüßen
 Finn
-
+{% for s in signature %}
+{{ s }}
+{% endfor %}
 {% for f in footer %}
 {{ f }}
 {% endfor %}

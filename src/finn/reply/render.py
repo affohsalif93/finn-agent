@@ -1,12 +1,17 @@
 """Report → German reply mail (ARCHITECTURE §6.4): code builds the mail, the LLM only polishes.
 
-1. Code fills Jinja2 templates (`templates/`) from the `Report`: checked input, warnings,
-   summary, table, calculation path per covenant, notes, footer. This alone is a complete mail.
-2. Optional polish (D21): the LLM rewrites only the summary and notes paragraphs, which it
+1. Code fills Jinja2 templates (`templates/`) from the `Report`. Result mail, in this order:
+   greeting + "die Covenant-Prüfung … ist abgeschlossen", lead box (overall result, tightest
+   covenant with headroom, sensitivity, early-warning note), compact table with a status dot
+   and footnote marks, footnotes (contract sources, plan file), Hinweise (input notes and
+   contract notes, condensed), links to the calculation paths, one path per covenant
+   (`paths.py`), the shared EBITDA derivation, signature. This alone is a complete mail.
+2. Optional polish (D21): the LLM rewrites only the lead sentences and the Hinweise, which it
    sees with every number and name replaced by a placeholder (`{{N3}}`, `{{NAME2}}`).
 3. Placeholder check + number check (`number_check.py`); any doubt → the template text.
 
-Variants: result (incl. PARTIAL), ask, block, other (off-topic / question), error.
+Variants in the same visual style: result (incl. PARTIAL), ask, block, other (off-topic /
+question), error: greeting, one-line lead box, what exactly is wrong, "So geht es weiter".
 """
 
 import hashlib
@@ -15,7 +20,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from decimal import Decimal
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined, select_autoescape
 from pydantic import BaseModel, ConfigDict
@@ -26,17 +31,19 @@ from finn.errors import ErrorCode, Finding, Severity, finding
 from finn.llm import client
 from finn.mail.thread import reply_references, reply_subject
 from finn.models.mail import InboundMessage, ReplyDraft, ReplyKind
-from finn.models.result import AssumedZero, CheckedInput, CovenantResult, Excluded, Report, Trace
-from finn.models.result import Used as UsedTrace
-from finn.plan.render import text_table
+from finn.models.result import CheckedInput, ContractNote, CovenantResult, Report
+from finn.reply import paths as rw
 from finn.reply.number_check import allowed_values, unknown_numbers
 
 TEMPLATES = Path(__file__).parent / "templates"
-FOOTER_DETERMINISTIC = "Alle Kennzahlen wurden deterministisch berechnet, nicht vom Sprachmodell."
-EARLY_WARNING = (
-    "Hinweis: Frühwarnung auf Planbasis, kein Vertragsbruch (maßgeblich ist der Jahresabschluss)."
+FOOTER_DETERMINISTIC = (
+    "Alle Kennzahlen stammen aus einem deterministischen Rechenkern, nicht aus dem Sprachmodell."
 )
-_QUOTE_MAX = 280
+EARLY_WARNING = (
+    "Frühwarnung auf Planbasis, kein Vertragsbruch (maßgeblich ist der Jahresabschluss)."
+)
+MAX_NOTES = 6
+Tone = Literal["info", "warn", "bad", "neutral"]
 
 _env = Environment(
     loader=FileSystemLoader(TEMPLATES),
@@ -46,14 +53,6 @@ _env = Environment(
     keep_trailing_newline=True,
     undefined=StrictUndefined,
 )
-
-
-def _text_table(headers: list[str], rows: list["Row"]) -> str:
-    cells = [[r.contract, r.covenant, r.value, r.threshold, r.headroom, r.met] for r in rows]
-    return "\n".join(text_table(headers, cells))
-
-
-_env.globals["text_table"] = _text_table
 
 
 # ── Message-ID ───────────────────────────────────────────────────────────────
@@ -70,33 +69,23 @@ def reply_message_id(workflow_id: str, seq: int, kind: str, from_addr: str) -> s
 
 
 @dataclass
-class Line:
-    level: int
-    text: str
-    muted: bool = False
-
-
-@dataclass
-class PathBlock:
-    title: str
-    status: str
-    source: str | None  # "§ 14 Abs. 1 lit. b, S. 7: „…“"
-    more_sources: str | None
-    formula: str | None
-    sub_formulas: list[str]
-    lines: list[Line]
-    notes: list[str]
-
-
-@dataclass
 class Row:
-    contract: str
-    covenant: str
+    contract: str  # "V4 · Konsortialkredit"
+    covenant: str  # "Dynamischer Verschuldungsgrad"
+    mark: str  # footnote mark "⁴"
     value: str
     threshold: str
     headroom: str
     met: str
     status: str  # met | tight | breached | open
+    anchor: str
+    highlight: bool = False  # the tightest covenant
+
+
+@dataclass
+class Link:
+    anchor: str
+    label: str
 
 
 @dataclass
@@ -104,18 +93,19 @@ class Context:
     kind: ReplyKind
     salutation: str
     intro: str
-    checked: list[str] = field(default_factory=list)  # "Datei: …"
-    input_status: str | None = None
-    warnings: list[str] = field(default_factory=list)
-    infos: list[str] = field(default_factory=list)
-    summary: list[str] = field(default_factory=list)
+    tone: Tone = "info"
+    summary: list[str] = field(default_factory=list)  # lead box (polished by the LLM)
     early_warning: str | None = None
+    items: list[str] = field(default_factory=list)  # ask / block: what is wrong / needed
+    next_step: str | None = None  # "So geht es weiter: …"
     table_headers: list[str] = field(default_factory=list)
     rows: list[Row] = field(default_factory=list)
-    paths: list[PathBlock] = field(default_factory=list)
-    notes: list[str] = field(default_factory=list)
-    items: list[str] = field(default_factory=list)  # ask / block: what is wrong / needed
-    closing: list[str] = field(default_factory=list)
+    footnotes: list[str] = field(default_factory=list)
+    notes: list[str] = field(default_factory=list)  # Hinweise (polished by the LLM)
+    links: list[Link] = field(default_factory=list)
+    paths: list[rw.PathBlock] = field(default_factory=list)
+    ebitda: list[rw.EbitdaBlock] = field(default_factory=list)
+    signature: list[str] = field(default_factory=list)
     footer: list[str] = field(default_factory=list)
     run_id: str = ""
 
@@ -133,29 +123,13 @@ def salutation(name: str | None) -> str:
     return f"Guten Tag {clean},"
 
 
-def _footer(run_id: str, deterministic: bool) -> list[str]:
-    lines = [FOOTER_DETERMINISTIC] if deterministic else []
-    return [*lines, f"Finn · Referenz: {run_id}"]
-
-
-def _checked_lines(h: CheckedInput) -> list[str]:
-    status = "Entwurf" if h.status == "draft" else "beschlossen"
-    version = f" vom {h.version_date:%d.%m.%Y}" if h.version_date else ""
-    return [
-        f"Datei: {h.file or '–'} (SHA-256 {h.sha256[:12]}…)",
-        f"Unternehmen: {h.company or '–'} · Plan {h.plan_year} ({status}{version}) · "
-        f"Stichtag {h.reporting_date:%d.%m.%Y}",
-        f"Vertragsprofile: {', '.join(sorted(h.profile_hashes)) or '–'}",
-    ]
+def _footer(run_id: str) -> list[str]:
+    return [f"Referenz: {run_id}"]
 
 
 def _finding_text(f: Finding) -> str:
     cells = ", ".join(str(r) for r in f.refs[:3])
     return f"{f.message_de} [{cells}]" if cells else f.message_de
-
-
-def _contract_label(r: CovenantResult) -> str:
-    return f"{r.contract_id} {r.contract_name_de}"
 
 
 def _status_key(r: CovenantResult) -> str:
@@ -164,101 +138,11 @@ def _status_key(r: CovenantResult) -> str:
     return "breached" if r.status == "breached" else "open"
 
 
-def _formula(r: CovenantResult) -> str | None:
-    if not r.formula_de:
-        return None
-    if r.value_raw is None or r.value_rounded is None:
-        return r.formula_de
-    raw = number_de(r.value_raw, 4)
-    times = " × 100" if r.unit == "percent" else ""
-    return f"{r.formula_de}{times} = {raw} → gerundet {value_de(r)}"
+def _strip_period(text: str) -> str:
+    return text.strip().rstrip(".").strip()
 
 
-def _cells(refs: Sequence[object]) -> str:
-    if not refs:
-        return ""
-    if len(refs) <= 3:
-        return f" [{', '.join(str(r) for r in refs)}]"
-    return f" [{len(refs)} Zellen]"
-
-
-def _weight(w: Decimal) -> str:
-    if w == 1:
-        return ""
-    if w == -1:
-        return "− "
-    return f"{number_de(w).replace('-', '−')} × "
-
-
-def _trace_lines(traces: Sequence[Trace], level: int) -> list[Line]:
-    out: list[Line] = []
-    for t in traces:
-        if isinstance(t, UsedTrace):
-            out.append(Line(level, f"{_weight(t.weight)}{t.label_de} {number_de(t.value)}"
-                                   f"{_cells(t.refs)}"))  # fmt: skip
-            parts = t.parts
-            used = [p for p in parts if isinstance(p, UsedTrace)]
-            # A definition that is just one plan line ("Eigenkapital" = "A. Eigenkapital"):
-            # show the line once, keep the notes about left-out parts.
-            if (
-                len(used) == 1
-                and used[0].value == t.value
-                and used[0].weight == 1
-                and not used[0].parts
-            ):
-                parts = [p for p in parts if not isinstance(p, UsedTrace)]
-            if parts:
-                out += _trace_lines(parts, level + 1)
-        elif isinstance(t, Excluded):
-            value = f" {number_de(t.value)}" if t.value is not None else ""
-            evidence = (
-                f" (Beleg {t.evidence.evidence})" if t.evidence and t.evidence.evidence else ""
-            )
-            out.append(Line(level, f"– {t.label_de}{value}{_cells(t.refs)}: "
-                                   f"{t.reason}{evidence}", muted=True))  # fmt: skip
-        elif isinstance(t, AssumedZero):
-            out.append(Line(level, f"– {t.label_de}: {t.reason}", muted=True))
-    return out
-
-
-def _path(r: CovenantResult) -> PathBlock:
-    src = r.sources[0] if r.sources else None
-    source = None
-    if src is not None:
-        quote = src.quote if len(src.quote) <= _QUOTE_MAX else src.quote[: _QUOTE_MAX - 1] + "…"
-        source = f"{src.section}, S. {src.page}: „{quote}“"
-    seen: list[str] = []
-    for s in r.sources[1:]:
-        cite = f"{s.section}, S. {s.page}"
-        if cite not in seen and (src is None or cite != f"{src.section}, S. {src.page}"):
-            seen.append(cite)
-    lines: list[Line] = []
-    if r.components is not None:
-        lines.append(Line(0, "Zähler:"))
-        lines += _trace_lines(r.components.numerator, 1)
-        if r.components.denominator:
-            lines.append(Line(0, "Nenner:"))
-            lines += _trace_lines(r.components.denominator, 1)
-    notes: list[str] = []
-    if r.reason:
-        notes.append(f"Grund: {r.reason}")
-    for alt in r.alternatives:
-        notes.append(f"Alternative ({alt.assumption_de}): {number_de(alt.value_rounded)}")
-    if r.sensitivity:
-        notes.append(f"Sensitivität: {r.sensitivity.text_de}")
-    for f in r.findings:
-        prefix = "Achtung: " if f.severity in (Severity.WARN, Severity.PARTIAL) else ""
-        notes.append(prefix + _finding_text(f))
-    return PathBlock(
-        title=f"{_contract_label(r)} · {r.name_de}",
-        status=met_de(r),
-        source=source,
-        more_sources=f"Weitere Fundstellen: {'; '.join(seen)}" if seen else None,
-        formula=_formula(r),
-        sub_formulas=list(r.sub_formulas_de),
-        lines=lines,
-        notes=notes,
-    )
+# ── Result: lead box ─────────────────────────────────────────────────────────
 
 
 def _summary(report: Report) -> list[str]:
@@ -289,20 +173,112 @@ def _summary(report: Report) -> list[str]:
             f"{word} eingehalten; {'; '.join(parts)}."
         )
     tight = next((r for r in results if r.covenant_id == report.tightest), None)
-    if tight is not None and tight.threshold is not None:
+    if tight is not None and tight.threshold is not None and tight.headroom is not None:
         bound = "min." if tight.operator == ">=" else "max."
         limit = threshold_de(tight).split(" ", 1)[1]
+        room = headroom_de(tight).lstrip("-")
+        how = f"verfehlt um {room}" if tight.status == "breached" else f"Spielraum {room}"
         out.append(
             f"Am engsten: {tight.name_de} ({tight.contract_name_de}) mit {value_de(tight)} bei "
-            f"{bound} {limit}."
+            f"{bound} {limit} ({how})."
         )
         if tight.sensitivity:
             out.append(tight.sensitivity.text_de)
-    knapp = [r for r in results if r.status == "met" and r.tight]
-    if knapp:
-        names = ", ".join(f"{r.name_de} ({r.contract_name_de})" for r in knapp)
-        out.append(f"Knapp eingehalten (Spielraum unter 10 % des Grenzwerts): {names}.")
+    for r in results:
+        changed = [a for a in r.alternatives if a.status != r.status]
+        for alt in changed:
+            word_alt = {"met": "eingehalten", "breached": "nicht eingehalten"}.get(
+                alt.status, "nicht berechenbar"
+            )
+            pct = " %" if r.unit == "percent" else ""
+            out.append(
+                f"{r.name_de} ({r.contract_name_de}) hängt an einer im Plan nicht eindeutig "
+                f"belegten Annahme; {alt.assumption_de}: "
+                f"{number_de(alt.value_rounded)}{pct} ({word_alt})."
+            )
     return out
+
+
+def _tone(report: Report) -> Tone:
+    if any(r.status == "breached" for r in report.results):
+        return "bad"
+    if any(r.status in ("not_computable", "manual_review") for r in report.results):
+        return "warn"
+    return "info"
+
+
+# ── Result: Hinweise ─────────────────────────────────────────────────────────
+
+_SENTENCE = re.compile(r"(?<=[a-zäöüß)])\.\s+(?=[A-ZÄÖÜ])")
+
+
+def _note_head(text: str) -> tuple[str, str]:
+    """ "Konsortialkredit (DVG): rest" → ("Konsortialkredit", "rest")."""
+    head, sep, rest = text.partition(": ")
+    if not sep or len(head) > 70:
+        return "", text
+    return re.sub(r"\s*\([^)]*\)$", "", head), rest
+
+
+def _short_note(note: ContractNote, rest: str) -> str:
+    if note.kind == "no_covenants":  # first two sentences: the statement and the main reason
+        sentences = _SENTENCE.split(rest)
+        return ". ".join(_strip_period(s) for s in sentences[:2])
+    return _strip_period(rest)
+
+
+def _hints(report: Report, general: Sequence[Finding]) -> list[str]:
+    out: list[str] = []
+    warns = [_strip_period(f.message_de) for f in general
+             if f.severity in (Severity.WARN, Severity.PARTIAL)]  # fmt: skip
+    infos = [_strip_period(f.message_de) for f in general if f.severity == Severity.INFO]
+    if warns:
+        out.append("Achtung: " + "; ".join(warns) + ".")
+    if infos:
+        out.append("Eingabe: " + "; ".join(infos) + ".")
+    by_contract: dict[str, tuple[str, list[str]]] = {}
+    for note in report.contract_notes:
+        head, rest = _note_head(note.text_de)
+        name, texts = by_contract.setdefault(note.contract_id, (head, []))
+        texts.append(_short_note(note, rest))
+    for r in report.results:  # contract requirements on the plan (V2: approved plan)
+        for f in r.findings:
+            if f.code == ErrorCode.PLAN_STATUS_REQUIRED:
+                name, texts = by_contract.setdefault(r.contract_id, (r.contract_name_de, []))
+                text = _strip_period(rw.strip_label(f.message_de, r))
+                if text not in texts:
+                    texts.append(text)
+    for cid in sorted(by_contract):
+        name, texts = by_contract[cid]
+        label = name or cid  # names only: ids like "V4" would reach the LLM (D21)
+        out.append(f"{label}: " + "; ".join(t for t in texts if t) + ".")
+    if len(out) > MAX_NOTES:  # keep the list short: the rest in one bullet
+        out = [*out[: MAX_NOTES - 1], " ".join(out[MAX_NOTES - 1 :])]
+    return out
+
+
+# ── Result context ───────────────────────────────────────────────────────────
+
+
+def _intro(h: CheckedInput | None) -> str:
+    year = f" {h.plan_year}" if h else ""
+    return f"die Covenant-Prüfung für den Wirtschaftsplan{year} ist abgeschlossen."
+
+
+def _plan_footnote(report: Report) -> str:
+    h = report.header
+    sheets = rw.plan_sheets(report.results)
+    text = f"Planwerte: {h.file if h and h.file else 'Wirtschaftsplan'}"
+    if sheets:
+        text += f" ({', '.join(sheets)})"
+    if h is not None:
+        status = "Entwurf" if h.status == "draft" else "beschlossen"
+        version = f" vom {h.version_date:%d.%m.%Y}" if h.version_date else ""
+        text += (
+            f" · {h.company or '–'} · Plan {h.plan_year} ({status}{version}) · Stichtag "
+            f"{h.reporting_date:%d.%m.%Y} · Eingangsprüfungen bestanden"
+        )
+    return text
 
 
 def result_context(
@@ -315,56 +291,79 @@ def result_context(
 ) -> Context:
     h = report.header
     general = [f for f in [*extra_findings, *report.findings] if not f.affects]
-    warnings = [
-        _finding_text(f) for f in general if f.severity in (Severity.WARN, Severity.PARTIAL)
-    ]
-    infos = [_finding_text(f) for f in general if f.severity == Severity.INFO]
-    pct = f"{tight_ratio * 100:.0f}"
-    summary = [s.replace("unter 10 %", f"unter {pct} %") for s in _summary(report)]
     year = h.plan_year if h else ""
-    rows = [
-        Row(_contract_label(r), r.name_de, value_de(r), threshold_de(r), headroom_de(r),
-            met_de(r), _status_key(r))
-        for r in report.results
-    ]  # fmt: skip
+    rows: list[Row] = []
+    footnotes: list[str] = []
+    for n, r in enumerate(report.results, 1):
+        rows.append(
+            Row(
+                contract=f"{r.contract_id} · {r.contract_name_de}",
+                covenant=r.name_de,
+                mark=rw.mark(n),
+                value=value_de(r),
+                threshold=threshold_de(r),
+                headroom=headroom_de(r).replace("-", "−"),
+                met=met_de(r),
+                status=_status_key(r),
+                anchor=rw.anchor(r),
+                highlight=r.covenant_id == report.tightest,
+            )
+        )
+        footnotes.append(f"{rw.mark(n)} {rw.footnote(r)}")
+    footnotes.append(_plan_footnote(report))
+    blocks = [rw.path_block(r, _status_key(r), tight_ratio) for r in report.results]
+    ebitda = rw.ebitda_blocks(report.results)
+    links = [Link(b.anchor, f"{b.title}") for b in blocks]
+    links += [Link(e.anchor, e.title) for e in ebitda]
+    pct = f"{tight_ratio * 100:.0f}"
     return Context(
         kind="result",
         salutation=salutation(inbound.from_name),
-        intro="vielen Dank für Ihre Nachricht. Hier ist das Ergebnis der Covenant-Prüfung.",
-        checked=_checked_lines(h) if h else [],
-        input_status=(
-            "Eingangsprüfungen bestanden (Bilanz ausgeglichen, Darlehensspiegel abgestimmt, "
-            "Unternehmen und Planjahr passend)"
-            + ("." if not warnings else "; Hinweise siehe unten.")
-        ),
-        warnings=warnings,
-        infos=infos,
-        summary=summary,
+        intro=_intro(h),
+        tone=_tone(report),
+        summary=[s.replace("unter 10 %", f"unter {pct} %") for s in _summary(report)],
         early_warning=EARLY_WARNING,
-        table_headers=["Vertrag", "Covenant", f"Plan {year}", "Grenze", "Spielraum", "Erfüllt"],
+        table_headers=["Covenant", f"Plan {year}", "Grenze", "Spielraum", "Erfüllt"],
         rows=rows,
-        paths=[_path(r) for r in report.results],
-        notes=[n.text_de for n in report.contract_notes],
-        closing=["Bei Rückfragen antworten Sie einfach auf diese Nachricht."],
-        footer=_footer(run_id, deterministic=True),
+        footnotes=footnotes,
+        notes=_hints(report, general),
+        links=links,
+        paths=blocks,
+        ebitda=ebitda,
+        next_step="Bei Rückfragen antworten Sie einfach auf diese Nachricht.",
+        signature=[FOOTER_DETERMINISTIC],
+        footer=_footer(run_id),
         run_id=run_id,
     )
+
+
+# ── ASK / BLOCK / OTHER / ERROR ──────────────────────────────────────────────
+
+_ASK_LEADS: dict[str, str] = {
+    ErrorCode.ATTACHMENT_MULTIPLE: "Ich benötige noch eine Angabe: welche Datei ich prüfen soll.",
+    ErrorCode.MAIL_TOO_LARGE: "Ihre Nachricht ist zu groß; ich benötige nur den Wirtschaftsplan.",
+    ErrorCode.MAIL_UNPARSEABLE: "Ihre Nachricht konnte ich nicht lesen.",
+    ErrorCode.XLSX_ENCRYPTED: "Ich benötige den Wirtschaftsplan ohne Kennwort.",
+    ErrorCode.XLSX_CORRUPT: "Ich benötige eine lesbare Excel-Datei des Wirtschaftsplans.",
+}
+_ASK_DEFAULT = "Ich benötige noch den Wirtschaftsplan als Excel-Datei (.xlsx)."
 
 
 def ask_context(
     findings: Sequence[Finding], *, inbound: InboundMessage, run_id: str, wait_days: float
 ) -> Context:
+    lead = next((_ASK_LEADS[f.code] for f in findings if f.code in _ASK_LEADS), _ASK_DEFAULT)
     return Context(
         kind="ask",
         salutation=salutation(inbound.from_name),
-        intro="vielen Dank für Ihre Nachricht. Für die Covenant-Prüfung benötige ich noch "
-        "Folgendes:",
+        intro="vielen Dank für Ihre Nachricht. Für die Covenant-Prüfung fehlt noch etwas.",
+        tone="warn",
+        summary=[lead],
         items=[_finding_text(f) for f in findings],
-        closing=[
-            "Bitte antworten Sie einfach auf diese Nachricht und hängen Sie die Datei an; die "
-            f"Prüfung startet dann automatisch. Ich warte {wait_days:g} Tage auf Ihre Antwort."
-        ],
-        footer=_footer(run_id, deterministic=False),
+        next_step="Antworten Sie einfach auf diese Mail mit dem Wirtschaftsplan (.xlsx) im "
+        f"Anhang; die Prüfung startet dann automatisch. Ich warte {wait_days:g} Tage auf Ihre "
+        "Antwort.",
+        footer=_footer(run_id),
         run_id=run_id,
     )
 
@@ -379,42 +378,45 @@ def block_context(
     wait_days: float,
 ) -> Context:
     shown = [f for f in findings if f.severity in (Severity.BLOCK, Severity.ASK)] or list(findings)
+    name = file or "im Anhang"
     return Context(
         kind="block",
         salutation=salutation(inbound.from_name),
-        intro=f"vielen Dank für Ihre Nachricht. Die Datei {file or 'im Anhang'} kann ich so nicht "
-        "auswerten. Ein Covenant-Ergebnis bestätige ich erst, wenn die Eingangsprüfungen "
-        "bestanden sind:",
-        checked=_checked_lines(header) if header else [],
-        items=[_finding_text(f) for f in shown],
-        closing=[
-            "Bitte senden Sie eine korrigierte Fassung als Antwort auf diese Nachricht; die "
-            f"Prüfung startet dann automatisch neu. Ich warte {wait_days:g} Tage auf Ihre Antwort."
+        intro="vielen Dank für Ihre Nachricht und den Wirtschaftsplan.",
+        tone="bad",
+        summary=[
+            f"Die Datei {name} kann ich so nicht auswerten: Ein Covenant-Ergebnis bestätige ich "
+            "erst, wenn die Eingangsprüfungen bestanden sind."
         ],
-        footer=_footer(run_id, deterministic=False),
+        items=[_finding_text(f) for f in shown],
+        next_step="Antworten Sie einfach auf diese Mail mit dem korrigierten Plan im Anhang; die "
+        f"Prüfung startet dann automatisch neu. Ich warte {wait_days:g} Tage auf Ihre Antwort.",
+        footer=_footer(run_id),
         run_id=run_id,
     )
 
 
 def other_context(*, inbound: InboundMessage, run_id: str, question: bool) -> Context:
     if question:
-        intro = (
-            "vielen Dank für Ihre Nachricht. Rückfragen zu früheren Ergebnissen kann ich noch "
-            "nicht beantworten. Den Rechenweg finden Sie in meiner Ergebnis-Mail; für eine neue "
-            "Prüfung senden Sie mir bitte den Wirtschaftsplan als Excel-Datei."
+        lead = "Rückfragen zu früheren Ergebnissen kann ich noch nicht beantworten."
+        step = (
+            "Den Rechenweg finden Sie in meiner Ergebnis-Mail; für eine neue Prüfung senden Sie "
+            "mir bitte den Wirtschaftsplan als Excel-Datei (.xlsx)."
         )
     else:
-        intro = (
-            "vielen Dank für Ihre Nachricht. Ich bin Finn und prüfe die Financial Covenants Ihrer "
-            "Kreditverträge anhand des Wirtschaftsplans. Andere Anfragen kann ich nicht "
-            "bearbeiten. Für eine Prüfung senden Sie mir bitte den Wirtschaftsplan als "
-            "Excel-Datei (.xlsx)."
+        lead = (
+            "Ich bin Finn und prüfe die Financial Covenants Ihrer Kreditverträge anhand des "
+            "Wirtschaftsplans. Andere Anfragen kann ich nicht bearbeiten."
         )
+        step = "Für eine Prüfung senden Sie mir bitte den Wirtschaftsplan als Excel-Datei (.xlsx)."
     return Context(
         kind="other",
         salutation=salutation(inbound.from_name),
-        intro=intro,
-        footer=_footer(run_id, deterministic=False),
+        intro="vielen Dank für Ihre Nachricht.",
+        tone="neutral",
+        summary=[lead],
+        next_step=step,
+        footer=_footer(run_id),
         run_id=run_id,
     )
 
@@ -423,12 +425,41 @@ def error_context(*, inbound: InboundMessage, run_id: str) -> Context:
     return Context(
         kind="error",
         salutation=salutation(inbound.from_name),
-        intro="vielen Dank für Ihre Nachricht. Bei der Verarbeitung ist leider ein unerwarteter "
-        "Fehler aufgetreten. Das Betriebsteam ist informiert; Sie erhalten kein Ergebnis zu "
-        f"dieser Nachricht. Bitte nennen Sie bei Rückfragen die Referenz {run_id}.",
-        footer=_footer(run_id, deterministic=False),
+        intro="vielen Dank für Ihre Nachricht.",
+        tone="bad",
+        summary=[
+            "Bei der Verarbeitung ist leider ein unerwarteter Fehler aufgetreten; zu dieser "
+            "Nachricht erhalten Sie kein Ergebnis."
+        ],
+        next_step="Das Betriebsteam ist informiert. Bitte nennen Sie bei Rückfragen die Referenz "
+        f"{run_id}.",
+        footer=_footer(run_id),
         run_id=run_id,
     )
+
+
+# ── Plain-text helpers for the template ──────────────────────────────────────
+
+
+def _text_table(headers: list[str], rows: list[Row]) -> str:
+    from finn.plan.render import text_table
+
+    cells = [
+        [
+            f"{r.contract.replace(' · ', ' ', 1)} · {r.covenant}{r.mark}",
+            r.value,
+            r.threshold,
+            r.headroom,
+            r.met,
+        ]
+        for r in rows
+    ]
+    return "\n".join(text_table(headers, cells, max_width=70))
+
+
+_env.globals["text_table"] = _text_table
+_env.globals["path_text"] = rw.path_text
+_env.globals["ebitda_text"] = rw.ebitda_text
 
 
 # ── Polish (D21) ─────────────────────────────────────────────────────────────

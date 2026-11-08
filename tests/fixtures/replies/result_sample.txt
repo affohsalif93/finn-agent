@@ -1,127 +1,104 @@
 Guten Tag Dr. Max Mustermann,
 
-vielen Dank für Ihre Nachricht. Hier ist das Ergebnis der Covenant-Prüfung.
+die Covenant-Prüfung für den Wirtschaftsplan 2027 ist abgeschlossen.
 
-GEPRÜFTE EINGABE
-Datei: Wirtschaftsplan_2027.xlsx (SHA-256 6bed699bdc1e…)
-Unternehmen: Stadtwerke Musterstadt GmbH · Plan 2027 (Entwurf vom 15.10.2026) · Stichtag 31.12.2027
-Vertragsprofile: V1, V2, V3, V4
-Eingangsprüfungen bestanden (Bilanz ausgeglichen, Darlehensspiegel abgestimmt, Unternehmen und Planjahr passend).
-
-Hinweise zur Eingabe:
-- Entwurf vom 15.10.2026, nicht vom Aufsichtsrat genehmigt.
-- Darlehen Altdarlehen (Sammelposition, 5 Annuitätendarlehen, Abschluss vor 2019) ohne Vertrag im Vertragsordner. [Finanzierung!A9]
-
-ERGEBNIS
 Auf Basis des Plans werden alle 4 Financial Covenants eingehalten.
-Am engsten: Dynamischer Verschuldungsgrad (Konsortialkredit) mit 3,37 bei max. 3,50.
+Am engsten: Dynamischer Verschuldungsgrad (Konsortialkredit) mit 3,37 bei max. 3,50 (Spielraum 0,13).
 Das EBITDA (40.200 T€) darf um bis zu 1.512 T€ (3,8 %) sinken, bevor „Dynamischer Verschuldungsgrad“ die Grenze von 3,50 überschreitet; bei 1.513 T€ weniger: 3,51.
-Knapp eingehalten (Spielraum unter 10 % des Grenzwerts): Eigenkapitalquote (Konsortialkredit), Dynamischer Verschuldungsgrad (Konsortialkredit).
-Hinweis: Frühwarnung auf Planbasis, kein Vertragsbruch (maßgeblich ist der Jahresabschluss).
+Frühwarnung auf Planbasis, kein Vertragsbruch (maßgeblich ist der Jahresabschluss).
 
-ÜBERSICHT
-Vertrag              Covenant                           Plan 2027  Grenze    Spielraum  Erfüllt
--------------------  ---------------------------------  ---------  --------  ---------  ----------
-V2 Förderbank        Wirtschaftliche Eigenkapitalquote  34,32 %    ≥ 27,5 %  6,82 PP    ja
-V3 Landesbank        Schuldendienstdeckungsgrad (DSCR)  1,56       ≥ 1,30    0,26       ja
-V4 Konsortialkredit  Eigenkapitalquote                  30,7 %     ≥ 30,0 %  0,7 PP     ja (knapp)
-V4 Konsortialkredit  Dynamischer Verschuldungsgrad      3,37       ≤ 3,50    0,13       ja (knapp)
+Covenant                                              Plan 2027  Grenze    Spielraum  Erfüllt
+----------------------------------------------------  ---------  --------  ---------  ----------
+V2 Förderbank · Wirtschaftliche Eigenkapitalquote¹    34,32 %    ≥ 27,5 %  6,82 PP    ja
+V3 Landesbank · Schuldendienstdeckungsgrad (DSCR)²    1,56       ≥ 1,30    0,26       ja
+V4 Konsortialkredit · Eigenkapitalquote³              30,7 %     ≥ 30,0 %  0,7 PP     ja (knapp)
+V4 Konsortialkredit · Dynamischer Verschuldungsgrad⁴  3,37       ≤ 3,50    0,13       ja (knapp)
 
-RECHENWEG
+¹ gem. Vertrag 2, § 1 Abs. 1 S. 1–2; § 13 Abs. 1 S. 6
+² gem. Vertrag 3, Anlage 3 S. 13; § 13 Abs. 1 S. 5
+³ gem. Vertrag 4, § 1 Abs. 1 S. 1–3; § 14 Abs. 1 lit. a S. 6
+⁴ gem. Vertrag 4, § 1 Abs. 1 S. 2–3; § 14 Abs. 1 lit. b S. 7
+Planwerte: Wirtschaftsplan_2027.xlsx (GuV, Bilanz, Finanzierung) · Stadtwerke Musterstadt GmbH · Plan 2027 (Entwurf vom 15.10.2026) · Stichtag 31.12.2027 · Eingangsprüfungen bestanden
 
-V2 Förderbank · Wirtschaftliche Eigenkapitalquote: ja
-  Vertrag: § 13 Abs. 1, S. 6: „Die Kreditnehmerin verpflichtet sich, während der gesamten Laufzeit dieses Vertrages zu jedem Bilanzstichtag eine Wirtschaftliche Eigenkapitalquote von mindestens 27,5 % einzuhalten.“
-  Weitere Fundstellen: § 13 Abs. 2, S. 6; § 1 Abs. 1 „Wirtschaftliche Eigenkapitalquote“, S. 2; § 1 Abs. 1 „Wirtschaftliches Eigenkapital“, S. 2; § 1 Abs. 1 „Eigenkapital“, S. 1; § 1 Abs. 1 „Bilanzsumme“, S. 1; § 13 Abs. 3, S. 6; § 12 Abs. 3, S. 5; § 13 Abs. 4, S. 6; § 15 Abs. 1 lit. d, S. 7
-  (96.100 + 0,5 × 22.800) / 313.200 × 100 = 34,3231 → gerundet 34,32 %
-  Zähler:
-      Wirtschaftliches Eigenkapital 107.500 [Bilanz!D22, Bilanz!D23]
-          Eigenkapital 96.100 [Bilanz!D22]
-              – Eingeforderte, nicht eingezahlte Einlagen: im Plan nicht ausgewiesen, mit 0 angesetzt
-          0,5 × B. Sonderposten für Investitions- und Baukostenzuschüsse 22.800 [Bilanz!D23]
-  Nenner:
-      Bilanzsumme 313.200 [Bilanz!D15]
-  Sensitivität: Das Eigenkapital (96.100 T€) darf um bis zu 21.385 T€ (22,3 %) sinken (übrige Werte unverändert, Bilanzsumme gleich), bevor „Wirtschaftliche Eigenkapitalquote“ die Grenze von 27,5 % unterschreitet; bei 21.386 T€ weniger: 27,49 %.
-  Förderbank · Wirtschaftliche Eigenkapitalquote: im Plan nicht ausgewiesen, mit 0 angesetzt: Eingeforderte, nicht eingezahlte Einlagen.
-  Förderbank · Wirtschaftliche Eigenkapitalquote: Vertrag nennt keine Rundung; gerechnet mit 2 Nachkommastellen (kaufmännisch).
-  Hinweis: Förderbank Musterland verlangt den beschlossenen Wirtschaftsplan (§ 12 Abs. 1 lit. c, S. 5); der vorliegende Plan ist ein Entwurf.
-
-V3 Landesbank · Schuldendienstdeckungsgrad (DSCR): ja
-  Vertrag: § 13 Abs. 1, S. 5: „Die Kreditnehmerin verpflichtet sich, für jedes Geschäftsjahr während der Laufzeit dieses Vertrages einen Schuldendienstdeckungsgrad von mindestens 1,30 einzuhalten.“
-  Weitere Fundstellen: Anlage 3 (6), S. 13; § 13 Abs. 2, S. 5; Anlage 3 (2), S. 13; Anlage 3 (5), S. 13; Anlage 3 (4), S. 13; Anlage 3 (3), S. 13; § 13 Abs. 3, S. 6; § 15 Abs. 1 lit. b, S. 7; § 13 Abs. 4, S. 6
-  (40.200 − 3.200) / (4.930 + 18.750) = 1,5625 → gerundet 1,56
-  EBITDA = 10.700 + 3.200 + 5.100 − 300 + 21.500 = 40.200
-  Zähler:
-      EBITDA 40.200 [5 Zellen]
-          Jahresüberschuss 10.700 [GuV!D18]
-          Steuern vom Einkommen und vom Ertrag 3.200 [GuV!D17]
-          Zinsen und ähnliche Aufwendungen 5.100 [GuV!D13]
-          − Sonstige Zinsen und ähnliche Erträge 300 [GuV!D12]
-          Abschreibungen auf immaterielle Vermögensgegenstände und Sachanlagen 21.500 [GuV!D9]
-          – Außerordentliches Ergebnis: im Plan nicht ausgewiesen, mit 0 angesetzt
-      − Steuern vom Einkommen und vom Ertrag 3.200 [GuV!D17]
-  Nenner:
-      Schuldendienst 23.680 [12 Zellen]
-          Zinsaufwand je Darlehen (Darlehensspiegel) 4.930 [6 Zellen]
-          Planmäßige Tilgungen (Darlehensspiegel) 18.750 [6 Zellen]
-              Investitionsdarlehen Sparkasse Musterstadt (Nr. 4471 203 118) 1.250 [Finanzierung!D5]
-              Förderdarlehen Förderbank Musterland (Nr. FD-2022-08817) 1.500 [Finanzierung!D6]
-              Investitionsdarlehen Landesbank Mittelland (Nr. LBM-INV-2025-0412) 3.000 [Finanzierung!D7]
-              Konsortialkredit (Agent: Weserland Bank AG) 3.000 [Finanzierung!D8]
-              Altdarlehen (Sammelposition, 5 Annuitätendarlehen, Abschluss vor 2019) 9.000 [Finanzierung!D9]
-              Gesellschafterdarlehen Stadt Musterstadt (nachrangig, qualifizierter Rangrücktritt) 1.000 [Finanzierung!D13]
-              – Konsortialkredit (Agent: Weserland Bank AG) 3.000 [Finanzierung!E8]: freiwillige Sondertilgungen, nicht einzubeziehen
-  Sensitivität: Das EBITDA (40.200 T€) darf um bis zu 6.334 T€ (15,8 %) sinken, bevor „Schuldendienstdeckungsgrad (DSCR)“ die Grenze von 1,30 unterschreitet; bei 6.335 T€ weniger: 1,29.
-  Landesbank · Schuldendienstdeckungsgrad (DSCR): im Plan nicht ausgewiesen, mit 0 angesetzt: Außerordentliches Ergebnis.
-
-V4 Konsortialkredit · Eigenkapitalquote: ja (knapp)
-  Vertrag: § 14 Abs. 1 lit. a, S. 6: „die Eigenkapitalquote zu jedem Prüfungsstichtag nicht weniger als 30,0 % beträgt; und“
-  Weitere Fundstellen: § 14 Abs. 2, S. 7; § 1 Abs. 1 „Prüfungsstichtag“, S. 3; § 1 Abs. 1 „Eigenkapitalquote“, S. 2; § 1 Abs. 1 „Eigenkapital“, S. 2; § 1 Abs. 1 „Bilanzsumme“, S. 1; § 14 Abs. 3, S. 7; § 16 Abs. 1 lit. b, S. 7; § 14 Abs. 4, S. 7
-  96.100 / 313.200 × 100 = 30,6833 → gerundet 30,7 %
-  Zähler:
-      Eigenkapital 96.100 [Bilanz!D22]
-  Nenner:
-      Bilanzsumme 313.200 [Bilanz!D15]
-  Sensitivität: Das Eigenkapital (96.100 T€) darf um bis zu 2.296 T€ (2,4 %) sinken (übrige Werte unverändert, Bilanzsumme gleich), bevor „Eigenkapitalquote“ die Grenze von 30,0 % unterschreitet; bei 2.297 T€ weniger: 29,9 %.
-
-V4 Konsortialkredit · Dynamischer Verschuldungsgrad: ja (knapp)
-  Vertrag: § 14 Abs. 1 lit. b, S. 7: „der Dynamische Verschuldungsgrad für jeden Prüfungszeitraum nicht mehr als 3,50 beträgt.“
-  Weitere Fundstellen: § 14 Abs. 2, S. 7; § 1 Abs. 1 „Prüfungsstichtag“, S. 3; § 1 Abs. 1 „Dynamischer Verschuldungsgrad“, S. 2; § 1 Abs. 1 „Nettofinanzverbindlichkeiten“, S. 3; § 1 Abs. 1 „Finanzverbindlichkeiten“, S. 2; § 1 Abs. 1 „Nachrangiges Gesellschafterdarlehen“, S. 2; § 1 Abs. 1 „Nachrangiges Gesellschafterdarlehen“ (Fortsetzung), S. 3; § 1 Abs. 1 „Liquide Mittel“, S. 2; § 1 Abs. 1 „EBITDA“, S. 2; § 14 Abs. 3, S. 7; § 16 Abs. 1 lit. b, S. 7; § 14 Abs. 4, S. 7
-  (148.200 − 12.600) / 40.200 = 3,3731 → gerundet 3,37
-  EBITDA = 10.700 + 3.200 + 5.100 − 300 + 21.500 = 40.200
-  Zähler:
-      Nettofinanzverbindlichkeiten 135.600 [Bilanz!D28, Bilanz!D12]
-          Finanzverbindlichkeiten 148.200 [Bilanz!D28]
-              – Verbindlichkeiten gegenüber Gesellschafter (Darlehen Stadt Musterstadt, nachrangig mit qualifiziertem Rangrücktritt) 8.000 [Bilanz!D29]: nicht enthalten: qualifizierter Rangrücktritt (Nachrangiges Gesellschafterdarlehen) (Beleg Bilanz!A39)
-              – Anleihen: im Plan nicht ausgewiesen, mit 0 angesetzt
-              – Leasingverbindlichkeiten: im Plan nicht ausgewiesen, mit 0 angesetzt
-              – Factoring mit Rückgriff: im Plan nicht ausgewiesen, mit 0 angesetzt
-          − Kassenbestand und Guthaben bei Kreditinstituten 12.600 [Bilanz!D12]
-  Nenner:
-      EBITDA 40.200 [5 Zellen]
-          Jahresüberschuss 10.700 [GuV!D18]
-          Steuern vom Einkommen und vom Ertrag 3.200 [GuV!D17]
-          Zinsen und ähnliche Aufwendungen 5.100 [GuV!D13]
-          − Sonstige Zinsen und ähnliche Erträge 300 [GuV!D12]
-          Abschreibungen auf immaterielle Vermögensgegenstände und Sachanlagen 21.500 [GuV!D9]
-          – Außerordentliches Ergebnis: im Plan nicht ausgewiesen, mit 0 angesetzt
-  Sensitivität: Das EBITDA (40.200 T€) darf um bis zu 1.512 T€ (3,8 %) sinken, bevor „Dynamischer Verschuldungsgrad“ die Grenze von 3,50 überschreitet; bei 1.513 T€ weniger: 3,51.
-  Achtung: Konsortialkredit · Dynamischer Verschuldungsgrad: im Plan nicht ausgewiesen, mit 0 angesetzt: Anleihen, Leasingverbindlichkeiten, Factoring mit Rückgriff.
-  Konsortialkredit · Dynamischer Verschuldungsgrad: im Plan nicht ausgewiesen, mit 0 angesetzt: Außerordentliches Ergebnis.
-  Konsortialkredit · Dynamischer Verschuldungsgrad: (e) sonstige Geschäfte mit der wirtschaftlichen Wirkung einer Kreditaufnahme – im Plan nicht abbildbar; Annahme: im Plan nicht gesondert ausweisbar; angenommen, dass keine solchen Geschäfte bestehen (0 T€).
-
-HINWEISE
+Hinweise
+- Eingabe: Entwurf vom 15.10.2026, nicht vom Aufsichtsrat genehmigt; Darlehen Altdarlehen (Sammelposition, 5 Annuitätendarlehen, Abschluss vor 2019) ohne Vertrag im Vertragsordner.
 - Sparkasse: keine Financial Covenants. Die Kennzahlen der Präambel (bilanzielle Eigenkapitalquote 28,4 %, dynamischer Verschuldungsgrad 2,9) beschreiben die Lage zum 31.12.2019 und sind keine Verpflichtungen; § 14 enthält nur allgemeine Verpflichtungen, § 10 Abs. 4 (Nr. 22 AGB-Sparkassen) ist ein Recht auf Verstärkung von Sicherheiten, keine Kennzahl.
-- Förderbank: Unterschreitung auf Planbasis ist eine Frühwarnung, kein Kündigungsgrund (§ 13 Abs. 3, S. 6): unverzügliche Unterrichtung der Bank (§ 12 Abs. 3, S. 5); Gespräche über geeignete Maßnahmen (§ 13 Abs. 3, S. 6).
-- Landesbank: Unterschreitung auf Planbasis ist kein Vertragsbruch (maßgeblich ist der Jahresabschluss), verlangt aber eine Reaktion (§ 13 Abs. 3, S. 6): Maßnahmen innerhalb von 30 Tagen darlegen (§ 13 Abs. 3, S. 6).
-- Landesbank (Schuldendienstdeckungsgrad (DSCR)): Heilung durch Eigenkapitalzuführung möglich (rechnerisch dem Zähler hinzugerechnet), innerhalb von 30 Tagen, höchstens 2× während der Laufzeit, nicht in aufeinanderfolgenden Geschäftsjahren (§ 13 Abs. 4, S. 6).
-- Konsortialkredit: Dynamischer Verschuldungsgrad 3,37 > 3,00 → Marge 1,25 % p. a. laut Margenraster (§ 6 Abs. 3, S. 4) (anfänglich 1,10 %); Preisbestimmung, kein Covenant (§ 6 Abs. 4, S. 4).
-- Konsortialkredit: Unterschreitung auf Planbasis ist eine Frühwarnung, kein Kündigungsgrund (§ 14 Abs. 3, S. 7): auf Verlangen Gespräch über Gegenmaßnahmen (§ 14 Abs. 3, S. 7).
-- Konsortialkredit: keine Heilung durch Eigenkapitalzuführung (§ 14 Abs. 4, S. 7).
+- Förderbank: Unterschreitung auf Planbasis ist eine Frühwarnung, kein Kündigungsgrund (§ 13 Abs. 3, S. 6): unverzügliche Unterrichtung der Bank (§ 12 Abs. 3, S. 5); Gespräche über geeignete Maßnahmen (§ 13 Abs. 3, S. 6); Förderbank Musterland verlangt den beschlossenen Wirtschaftsplan (§ 12 Abs. 1 lit. c, S. 5); der vorliegende Plan ist ein Entwurf.
+- Landesbank: Unterschreitung auf Planbasis ist kein Vertragsbruch (maßgeblich ist der Jahresabschluss), verlangt aber eine Reaktion (§ 13 Abs. 3, S. 6): Maßnahmen innerhalb von 30 Tagen darlegen (§ 13 Abs. 3, S. 6); Heilung durch Eigenkapitalzuführung möglich (rechnerisch dem Zähler hinzugerechnet), innerhalb von 30 Tagen, höchstens 2× während der Laufzeit, nicht in aufeinanderfolgenden Geschäftsjahren (§ 13 Abs. 4, S. 6).
+- Konsortialkredit: Dynamischer Verschuldungsgrad 3,37 > 3,00 → Marge 1,25 % p. a. laut Margenraster (§ 6 Abs. 3, S. 4) (anfänglich 1,10 %); Preisbestimmung, kein Covenant (§ 6 Abs. 4, S. 4); Unterschreitung auf Planbasis ist eine Frühwarnung, kein Kündigungsgrund (§ 14 Abs. 3, S. 7): auf Verlangen Gespräch über Gegenmaßnahmen (§ 14 Abs. 3, S. 7); keine Heilung durch Eigenkapitalzuführung (§ 14 Abs. 4, S. 7).
+
+Rechenweg und Quellen
+Je Covenant mit Vertragsstelle, Formel und Eingangswerten, siehe unten.
+
+V2 Förderbank · Wirtschaftliche Eigenkapitalquote               34,32 % ≥ 27,5 % · Spielraum 6,82 PP
+Quelle im Vertrag   § 13 Abs. 1 (S. 6), Definition § 1 Abs. 1 (S. 1–2)
+Formel              (Eigenkapital + 0,5 × Sonderposten) / Bilanzsumme × 100
+Eingangswerte       Position                              T€   Zelle
+                    Eigenkapital                      96.100   Bilanz!D22
+                    + 0,5 × Sonderposten              22.800   Bilanz!D23
+                    = Wirtschaftliches Eigenkapital  107.500
+                    Bilanzsumme                      313.200   Bilanz!D15
+Ergebnis            107.500 / 313.200 × 100 = 34,323 % → 34,32 % (ohne Rundungsregel im Vertrag, 2
+                    Nachkommastellen)
+Besonderheit        Im Plan nicht ausgewiesen, mit 0 angesetzt: Ausstehende Einlagen.
+
+V3 Landesbank · Schuldendienstdeckungsgrad (DSCR)                       1,56 ≥ 1,30 · Spielraum 0,26
+Quelle im Vertrag   § 13 Abs. 1 (S. 5), Definition Anlage 3 (S. 13)
+Formel              (EBITDA − Ertragsteuern) / (Zinsen + Planmäßige Tilgungen)
+Eingangswerte       Position                       T€   Zelle
+                    EBITDA                     40.200   GuV (Herleitung unten)
+                    − Ertragsteuern             3.200   GuV!D17
+                    = Zähler                   37.000
+                    Zinsen (Darlehensspiegel)   4.930   Finanzierung!G5–G13
+                    + Planmäßige Tilgungen     18.750   Finanzierung!D5–D13
+                    = Schuldendienst           23.680
+Ergebnis            37.000 / 23.680 = 1,562 → kaufmännisch gerundet 1,56
+Besonderheit        Konsortialkredit (Agent: Weserland Bank AG) (3.000 T€, Finanzierung!E8) nicht
+                    einbezogen: freiwillige Sondertilgungen; Vertrag Anlage 3 S. 13: „… Nicht
+                    einzubeziehen sind freiwillige Sondertilgungen, vorzeitige Rückzahlungen sowie
+                    Rückzahlungen …“ Einbezogen wäre der Wert 1,39 (knapp eingehalten).
+
+V4 Konsortialkredit · Eigenkapitalquote                   30,7 % ≥ 30,0 % · Spielraum 0,7 PP (knapp)
+Quelle im Vertrag   § 14 Abs. 1 lit. a (S. 6), Definition § 1 Abs. 1 (S. 1–3)
+Formel              Eigenkapital / Bilanzsumme × 100
+Eingangswerte       Position           T€   Zelle
+                    Eigenkapital   96.100   Bilanz!D22
+                    Bilanzsumme   313.200   Bilanz!D15
+Ergebnis            96.100 / 313.200 × 100 = 30,68 % → kaufmännisch gerundet 30,7 %
+
+V4 Konsortialkredit · Dynamischer Verschuldungsgrad             3,37 ≤ 3,50 · Spielraum 0,13 (knapp)
+Quelle im Vertrag   § 14 Abs. 1 lit. b (S. 7), Definition § 1 Abs. 1 (S. 2–3)
+Formel              (Finanzverbindlichkeiten − Kassenbestand, Bankguthaben) / EBITDA
+Eingangswerte       Position                                      T€   Zelle
+                    Verbindlichkeiten ggü. Kreditinstituten  148.200   Bilanz!D28
+                    − Kassenbestand, Bankguthaben             12.600   Bilanz!D12
+                    = Nettofinanzverbindlichkeiten           135.600
+                    EBITDA                                    40.200   GuV (Herleitung unten)
+Ergebnis            135.600 / 40.200 = 3,373 → kaufmännisch gerundet 3,37
+Besonderheit        Gesellschafterdarlehen (8.000 T€, Bilanz!D29) nicht einbezogen: qualifizierter
+                    Rangrücktritt (Bilanz Anm. 2); Vertrag § 1 Abs. 1 S. 2: „… jedoch jeweils mit
+                    Ausnahme von Nachrangigen Gesellschafterdarlehen.“ Einbezogen wäre der Wert 3,57
+                    (nicht eingehalten).
+                    Im Plan nicht ausgewiesen, mit 0 angesetzt: Anleihen, Leasingverbindlichkeiten,
+                    Factoring mit Rückgriff.
+                    (e) sonstige Geschäfte mit der wirtschaftlichen Wirkung einer Kreditaufnahme –
+                    im Plan nicht abbildbar; Annahme: im Plan nicht gesondert ausweisbar;
+                    angenommen, dass keine solchen Geschäfte bestehen (0 T€).
+
+EBITDA (Herleitung)
+Verwendet in        V3, V4
+Eingangswerte       Position              T€   Zelle
+                    Jahresüberschuss  10.700   GuV!D18
+                    + Ertragsteuern    3.200   GuV!D17
+                    + Zinsaufwand      5.100   GuV!D13
+                    − Zinserträge        300   GuV!D12
+                    + Abschreibungen  21.500   GuV!D9
+                    = EBITDA          40.200
+Besonderheit        Im Plan nicht ausgewiesen, mit 0 angesetzt: Außerordentliches Ergebnis.
 
 Bei Rückfragen antworten Sie einfach auf diese Nachricht.
 
 Mit freundlichen Grüßen
 Finn
-
-Alle Kennzahlen wurden deterministisch berechnet, nicht vom Sprachmodell.
-Finn · Referenz: 20261102T081500Z_7d364a2056c1
+Alle Kennzahlen stammen aus einem deterministischen Rechenkern, nicht aus dem Sprachmodell.
+Referenz: 20261102T081500Z_7d364a2056c1

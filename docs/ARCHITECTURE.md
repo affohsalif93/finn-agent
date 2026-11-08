@@ -16,12 +16,12 @@ How Finn is built for the case study, and where it is designed to grow. Decision
   ┌───────┴───────┐  polls for tasks /       │ Temporal server + UI   │
   │ finn-worker   │ ◄──────────────────────► │ (state on a volume)    │
   │ workflow +    │  reports results         └────────────────────────┘
-  │ activities    │ ──► OpenAI ──► Langfuse traces
+  │ activities    │ ──► OpenAI (pseudonymised prompts, logged in llm_calls.jsonl)
   │               │ ──► run folder (files, results, reply)
   └───────────────┘ ──► data/contract_profiles/*.json (reviewed, read-only at runtime)
 ```
 
-- **Only outbound connections** (IMAP, SMTP, OpenAI, Langfuse). No public endpoint; the stack runs on a laptop or any VM (D10).
+- **Only outbound connections** (IMAP, SMTP, OpenAI). No public endpoint; the stack runs on a laptop or any VM (D10).
 - Poller and worker use **the same Docker image** with different commands.
 - Contract extraction is a **separate one-time command**, not part of the mail flow (D2).
 
@@ -512,7 +512,8 @@ Robustness rules: (1) never lose a mail: mark processed only after the workflow 
 **As built (Gmail, Nov 2026):**
 - Finn reads **only** `IMAP_FOLDER` (a Gmail label, default `Finn`, filled by a filter on the plus alias `FINN_ADDRESS`), never INBOX. A missing label → `INFRA_IMAP_FOLDER_MISSING` in the log, back-off, retry next cycle.
 - **Processed = moved** with `UID MOVE` to `IMAP_PROCESSED_FOLDER` (default `<folder>/Verarbeitet`, created on first use; COPY + `\Deleted` + EXPUNGE without MOVE). On Gmail that swaps the label; the mail stays in "All Mail". Custom IMAP keywords are not reliable on Gmail, folders are, and the state is visible in the web UI. Rejected mail is moved there too (after the security log event). Bodies are fetched with `BODY.PEEK[]`; mails above `MAX_MAIL_MB` only with their header (`MAIL_TOO_LARGE` → ASK reply).
-- **Sent detection:** the Sent folder is found by its `\Sent` SPECIAL-USE flag (the name is localised); `was_sent` searches it by Message-ID (`X-GM-RAW "rfc822msgid:<id>"` on Gmail, `HEADER Message-ID` elsewhere), after a local marker `runs/<id>/sent/<hash>.json`.
+- **Sent detection:** the Sent folder is found by its `\Sent` SPECIAL-USE flag (the name is localised), else by `IMAP_SENT_FOLDER` or a common name (`Sent`, `Gesendet`, …); `was_sent` searches it by Message-ID (`X-GM-RAW "rfc822msgid:<id>"` on Gmail, `HEADER Message-ID` elsewhere), after a local marker `runs/<id>/sent/<hash>.json`. Gmail's SMTP files sent mail itself; on other servers Finn APPENDs its reply to the Sent folder (created if missing; `IMAP_APPEND_SENT`, auto = not on Gmail), so the check works on any IMAP server.
+- **Transport:** IMAPS (`IMAP_SSL=true`) and SMTPS on 465 / STARTTLS otherwise (`SMTP_SECURITY=auto`); `IMAP_SSL=false` / `SMTP_SECURITY=plain` only for the local test server (§13.1, profile `testmail`).
 - The poller saves only the raw `.eml`; **attachments are extracted by `parse_message`** (first workflow step) into the run folder, so a broken MIME part fails a retryable activity, not the poller. `InboundMessage.raw` holds the bytes in the poller's memory only (excluded from every serialisation).
 - **Thread signalling:** for a mail with `In-Reply-To` / `References`, the poller checks each referenced Message-ID (nearest first) for a RUNNING `CovenantCheckWorkflow` and queries `state`; only one that `waiting_for_input` gets the `new_message` signal (the follow-up is saved to `<run>/followup_<hash>/`). Otherwise a new workflow starts (case C / late follow-up). Finn's replies keep the original `References`, so a reply to Finn's question still names the starting Message-ID.
 - **Loop protection:** Finn's mails carry `Auto-Submitted: auto-replied`, `X-Auto-Response-Suppress: All` and `X-Finn-Run: <run id>`; the gate ignores all three plus `Precedence: bulk/list/junk`, `X-Autoreply`, mailer-daemon and `From = FINN_ADDRESS`. The account address itself (`IMAP_USER`) is a normal sender (demo / live test).
@@ -634,6 +635,8 @@ Alle Kennzahlen wurden deterministisch berechnet, nicht vom Sprachmodell.
 Finn · Referenz: <run-id>
 ```
 
+**As built (Nov 2026), in the style of `material/Demo_Finn_Covenant-Pruefung.html`:** greeting + "die Covenant-Prüfung … ist abgeschlossen" · lead box (overall, tightest covenant with headroom, sensitivity, early-warning note; an ambiguous plan fact that flips a result is named here) · compact table with a coloured status dot and footnote marks · footnotes (definition + covenant clause per covenant, plan file, company, reporting date) · Hinweise (≤ 6 bullets: input notes, then one bullet per contract with its notes) · "Rechenweg und Quellen" links · one path per covenant in four steps (Quelle im Vertrag, Formel in words, Eingangswerte with short labels / T€ / cell and sub-totals, Ergebnis with the contract's rounding wording) plus "Besonderheit" (excluded components with reason, plan note and a trimmed verbatim contract quote; items set to 0; the alternative value only if it changes met / tight) · shared "EBITDA (Herleitung)" block · signature with the deterministic-core sentence and the reference. Code: `reply/render.py` (contexts), `reply/paths.py` (calculation path), templates `mail.{html,txt}.j2`. ASK / BLOCK / OTHER / ERROR use the same frame: one-line lead box (amber / red / grey), bullet list of what is wrong (file, cell), "So geht es weiter".
+
 **Variants and format decisions:**
 
 | Case | Mail |
@@ -714,13 +717,13 @@ Two kinds of retry: **poller** = no retry logic, the next cycle is the retry (ma
 | – | plan **values** | never sent (labels only, and only in the mapping fallback) |
 
 - The placeholder mapping lives in the run folder (`pseudonyms.json`), never in a prompt.
-- Langfuse traces contain only the pseudonymised prompts.
+- `llm_calls.jsonl` in the run folder holds only the pseudonymised prompts and the answers.
 - Module: `src/finn/llm/redact.py` (pseudonymise / restore), with tests.
 
 ### 8.2 Client
 - OpenAI structured outputs (JSON schema), low temperature, model configurable via env.
 - SDK retries with exponential backoff; timeouts set.
-- As built (`llm/client.py`): `complete_structured(system, user, schema, purpose, trace_id, session_id, model, temperature)` on the Responses API (`responses.parse`, strict schema from the pydantic model, `store=False`). Default model `gpt-6.1-sol` (`OPENAI_MODEL`, empty = default): the balanced GPT-6.1 tier for long-document structured extraction (1M context, structured outputs, $2 / $10 per 1M tokens). `temperature` is not sent to reasoning model families (they reject it); determinism comes from the schema, the deterministic checks and the human review. `OPENAI_TIMEOUT_SECONDS` (300) and `OPENAI_MAX_RETRIES` (3) go to the SDK. Everything that still fails (no key, retries exhausted, refusal, truncated or invalid answer) raises `LLMUnavailable`. `purpose` / `trace_id` / `session_id` are logged now and become Langfuse attributes later; prompts are never logged.
+- As built (`llm/client.py`): `complete_structured(system, user, schema, purpose, trace_id, session_id, model, temperature)` on the Responses API (`responses.parse`, strict schema from the pydantic model, `store=False`). Default model `gpt-6.1-sol` (`OPENAI_MODEL`, empty = default): the balanced GPT-6.1 tier for long-document structured extraction (1M context, structured outputs, $2 / $10 per 1M tokens). `temperature` is not sent to reasoning model families (they reject it); determinism comes from the schema, the deterministic checks and the human review. `OPENAI_TIMEOUT_SECONDS` (300) and `OPENAI_MAX_RETRIES` (3) go to the SDK. Everything that still fails (no key, retries exhausted, refusal, truncated or invalid answer) raises `LLMUnavailable`. Each call is recorded in the run folder (`llm_calls.jsonl`) and the structured log (`purpose`, `trace_id` = workflow ID, `session_id` = mail thread, model, tokens, seconds); prompts never go to the log.
 - Signatory masking (§8.1) is rule-based (`contracts/pdf_text.py`): names after "Herr/Frau/gez./i. V.", titled names ("Dr. …"), and word runs in signature blocks that are neither words of the contract body nor organisation / role words. The four sample contracts carry roles only, so nothing is masked there.
 - Provider failover: **documented, not built** (retry first, then a second provider with the same schema; validation catches schema drift).
 
@@ -729,12 +732,11 @@ Two kinds of retry: **poller** = no retry logic, the next cycle is the retry (ma
 | Layer | Tool | Content |
 |---|---|---|
 | Workflow | Temporal Web UI (`:8233`, keep private) | runs, steps, inputs/outputs, retries, waiting states |
-| LLM | Langfuse (optional via env) | prompts, responses, tokens, cost, latency; **trace ID = workflow ID**, **session = mail thread** |
-| Audit | run folder `runs/<ts>_<msgid>/` | `incoming.eml`, `plan_inputs.json`, `checks.json`, `results.json`, `reply.html`, `llm_calls.jsonl`, `log.txt`, `error.txt` |
-| Live | console | readable step log (also shown in the demo) |
+| Audit | run folder `runs/<ts>_<msgid>/` | `incoming.eml`, `request.json`, `plan_inputs.json`, `checks.json`, `results.json`, `pseudonyms.json`, `reply.*`, `llm_calls.jsonl` (pseudonymised prompts + answers), `log.txt`, `error.txt` |
+| Logs | console / JSON (`LOG_FORMAT`) | readable step log (also shown in the demo); per LLM call purpose, model, tokens, seconds; **trace ID = workflow ID**, **session = mail thread** |
 
 Structured log events carry `run_id`, `thread_id`, `step`, `severity`. Security events: `access_rejected`, `auth_failed`, `loop_ignored`.
-Later: Temporal → OpenTelemetry → Langfuse for one end-to-end trace.
+Next step: Langfuse or OpenTelemetry for cross-run cost/quality monitoring (D13, [ROADMAP.md](ROADMAP.md) §5).
 `runs/` is git-ignored (contains mail content).
 
 ## 10. Errors and resilience
@@ -757,12 +759,14 @@ Later: Temporal → OpenTelemetry → Langfuse for one end-to-end trace.
 OPENAI_API_KEY, OPENAI_MODEL (empty = gpt-6.1-sol), OPENAI_TIMEOUT_SECONDS=300, OPENAI_MAX_RETRIES=3   (last two optional, not in .env.example)
 IMAP_HOST=imap.gmail.com, IMAP_PORT=993, IMAP_USER, IMAP_PASSWORD   (Gmail app password)
 SMTP_HOST=smtp.gmail.com, SMTP_PORT=465, SMTP_USER, SMTP_PASSWORD
+IMAP_SSL=true, SMTP_SECURITY=auto|ssl|starttls|plain, IMAP_SENT_FOLDER=(empty = \Sent flag / common name),
+IMAP_APPEND_SENT=auto|true|false   (optional; the defaults are the Gmail behaviour)
+FINN_LLM_FAKE=false   (TEST ONLY: deterministic LLM stand-in llm/fake.py, set by the testmail profile)
 FINN_ADDRESS, ALLOWED_SENDERS=*, REQUIRE_DMARC_PASS=false
 IMAP_FOLDER=Finn, IMAP_PROCESSED_FOLDER=(empty = <IMAP_FOLDER>/Verarbeitet), SMTP_FROM_NAME=Finn (Covenant-Prüfung)
 MAX_MAIL_MB=25, WAIT_FOR_INPUT_DAYS=7, REPLY_LLM_POLISH=true   (optional)
 CONTRACTS_DIR=material, PROFILES_DIR=data/contract_profiles, RUNS_DIR=runs
 TEMPORAL_ADDRESS=temporal:7233, TEMPORAL_TASK_QUEUE=finn
-LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY, LANGFUSE_HOST=https://cloud.langfuse.com   (optional, EU region)
 POLL_INTERVAL_SECONDS=15, LOOKBACK_DAYS=3, TIGHT_HEADROOM_RATIO=0.10, LOG_FORMAT=console|json
 ```
 `.env.example` holds the same keys with placeholders only.
@@ -824,7 +828,8 @@ src/finn/
 │   ├── parse.py           .eml → ParsedMessage (attachments, TNEF/zip/link detection)
 │   └── thread.py          thread ID from In-Reply-To / References / subject
 ├── llm/
-│   ├── client.py          OpenAI client, structured outputs, timeouts, optional Langfuse
+│   ├── client.py          OpenAI client, structured outputs, timeouts, usage log
+│   ├── fake.py            TEST ONLY: deterministic stand-in (FINN_LLM_FAKE), live mail tests / demo
 │   └── redact.py          pseudonymise / restore (D21)
 ├── request/
 │   └── intent.py          classify_intent (LLM) + rule fallback + input contracts
@@ -850,6 +855,7 @@ tests/
 ├── unit/                  numbers, plan, calc (answer key, rounding, units, trap), gate, parse, redact
 ├── integration/           pipeline end to end with .eml fixtures (LLM mocked)
 ├── workflow/              Temporal test environment (waiting, signals, idempotent send)
+├── live/                  case catalogue, live tests against GreenMail (marker mailserver), gallery
 └── fixtures/
     ├── plans/             generated plan variants (FAILURES.md)
     ├── mails/             .eml variants
@@ -884,7 +890,16 @@ env_file:  .env (optional, never baked into the image); compose sets TEMPORAL_AD
 End-to-end check: `docker compose run --rm finn-worker ping` → `pong` (placeholder `PingWorkflow` until the real workflow exists). Verified: restart of Temporal (worker reconnects with backoff), `down`/`up` keeps workflow history, SIGTERM shuts down cleanly.
 No database for Finn itself: workflow state lives in Temporal, the audit trail in `runs/`, profiles in the repo. OpenAI is external.
 
-**Optional profile `observability`** (`docker compose --profile observability up -d`): self-hosted Langfuse v4 (web, worker, Postgres, ClickHouse, Redis, MinIO; trimmed from the official compose file, AI gateway left out), all ports on localhost, UI on :3000. Secrets (`LF_*`) and the project API keys live in `.env`; headless initialisation creates the organisation, project, keys and admin login on first start. The web container's healthcheck gates the worker (web runs the DB migrations). Langfuse v4 accepts traces only via its OpenTelemetry endpoint (`/api/public/otel`), which the Python SDK uses; the legacy `/api/public/ingestion` takes scores only. Verified: trace stored in ClickHouse. Memory: ~2 GB for the profile; a VM running it needs ≥ 4 GB (Langfuse recommends 16 GB for production). Without the profile, Finn's containers point at `http://langfuse-web:3000`, find nothing and trace nowhere (warning only).
+**Optional profile `testmail`** (local mail test environment; the real mailbox and the real worker are never involved):
+
+| Service | Image | Role |
+|---|---|---|
+| `greenmail` | `greenmail/standalone:2.1.15` | SMTP `127.0.0.1:3025`, IMAP `127.0.0.1:3143`, in memory. Auth on (no `greenmail.auth.disabled`), login = full address (`greenmail.users.login=email`), preconfigured users `finn@finn.test`, `finn-pytest@finn.test`, `cfo@stadtwerke.test`, `blocked@stadtwerke.test`, `eve@unbekannt.test` (password `<local part>-test`); any other recipient gets a mailbox on first delivery (password = address). Verified: `IMAP4rev1 LITERAL+ UIDPLUS SORT IDLE MOVE SASL-IR QUOTA`, delimiter `.`, CREATE works; **no SPECIAL-USE, no STARTTLS, no Sent folder**, and its SMTP does not file sent mail. |
+| `roundcube` | `roundcube/roundcubemail:1.7.5-apache` | webmail on `http://localhost:8080` against GreenMail (SQLite; `docker/roundcube/testmail.inc.php`: German UI, SMTP AUTH with the IMAP login, HTML preferred) |
+| `finn-worker-testmail`, `finn-poller-testmail` | `finn:testmail` (same Dockerfile, own tag) | Finn for `finn@finn.test`: env from `.env.testmail.example` (+ optional git-ignored `.env.testmail`), task queue `finn-testmail` on the compose Temporal, `./runs-testmail` (git-ignored), profiles read-only; LLM stand-in unless started via `--real-llm` |
+
+Start without touching the core services: `docker compose --profile testmail up -d --build --no-deps greenmail roundcube finn-worker-testmail finn-poller-testmail`. Live tests: `uv run pytest -m mailserver` (worker + poller inside pytest on the Temporal test server, Finn's mailbox `finn-pytest@finn.test`, LLM stand-in; `--real-llm` = OpenAI, `--mail-driver compose` = the containers, `--case NAME` selects). Demo: `uv run finn demo send-cases [--only NAME] [--real-llm]` sends the catalogue (`tests/live/cases.py`) to the containers. Both write the gallery `out/replies/index.html`; the threads can be read in Roundcube as `cfo@stadtwerke.test` / `cfo-test`.
+What it proves: the real poller, gate, IMAP/SMTP connector (plain IMAP without SPECIAL-USE, MOVE to `Verarbeitet`, Sent APPEND + `HEADER Message-ID` search), workflow (ASK → wait → follow-up signal; revised plan → new run) and reply rendering work end to end on a second IMAP server; every case gets exactly the expected replies (none for gate rejects, loops and duplicates) in the right thread, with the expected error codes in the run folder or the poller log.
 
 ### 13.2 Contract onboarding is a command, not a service
 ```
@@ -901,6 +916,7 @@ Reasons: contracts don't change during the demo; a human review is required (her
 
 ### 13.3 Environments
 - **Local / demo:** `docker compose up -d`.
-- **Cloud demo (optional):** one small VM (e.g. Hetzner CX22 in Germany, ~€4/month): Docker, `git clone`, `.env`, `docker compose up -d`. No inbound ports; Temporal UI via SSH tunnel only. Test the Gmail login from the VM's IP a day before the demo.
+- **Cloud demo (optional):** one small VM (e.g. Hetzner CX22 in Germany, ~€4/month; the core stack needs < 1 GB RAM): Docker, `git clone`, `.env`, `docker compose up -d`. No inbound ports; Temporal UI via SSH tunnel only. Test the Gmail login from the VM's IP a day before the demo.
 - **CI:** GitHub Actions on every push: `ruff check`, `ruff format --check`, `mypy`, `pytest` (LLM mocked, no secrets needed).
 - **Production:** self-hosted Temporal with Postgres, or Temporal Cloud with client-side payload encryption; EU hosting; secrets in a secret store. See [ROADMAP.md](ROADMAP.md).
+

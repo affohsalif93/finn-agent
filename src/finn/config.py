@@ -36,12 +36,22 @@ class Settings(BaseSettings):
     # `imap_processed_folder` (default "<imap_folder>/Verarbeitet", a nested Gmail label).
     imap_host: str = "imap.gmail.com"
     imap_port: int = 993
+    # TLS on connect (IMAPS). `false` = plain IMAP, only for a local test server (GreenMail).
+    imap_ssl: bool = True
     imap_user: str = ""
     imap_password: SecretStr | None = None
     imap_folder: str = "Finn"
     imap_processed_folder: str = ""
+    # Sent folder: empty = the folder with the `\Sent` SPECIAL-USE flag, else a common name
+    # ("Sent", "Gesendet", …). Servers without SPECIAL-USE (GreenMail) need no setting.
+    imap_sent_folder: str = ""
+    # Copy each sent reply into the Sent folder via IMAP APPEND (idempotency check `was_sent`).
+    # auto = only if the server is not Gmail (Gmail's SMTP files sent mail itself).
+    imap_append_sent: Literal["auto", "true", "false"] = "auto"
     smtp_host: str = "smtp.gmail.com"
     smtp_port: int = 465
+    # auto = implicit TLS on port 465, else STARTTLS; `plain` only for a local test server.
+    smtp_security: Literal["auto", "ssl", "starttls", "plain"] = "auto"
     smtp_user: str = ""
     smtp_password: SecretStr | None = None
     smtp_from_name: str = "Finn (Covenant-Prüfung)"
@@ -56,6 +66,9 @@ class Settings(BaseSettings):
     wait_for_input_days: float = 7
     # Reply (§6.4): let the LLM rephrase summary + notes (placeholders only, D21); off → template.
     reply_llm_polish: bool = True
+    # TEST ONLY (live mail tests / `finn demo`): a deterministic stand-in replaces every LLM
+    # call (`llm/fake.py`). Never set in production; the worker logs a warning when it is on.
+    finn_llm_fake: bool = False
 
     @field_validator("imap_password", "smtp_password", mode="before")
     @classmethod

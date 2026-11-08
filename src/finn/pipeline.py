@@ -155,7 +155,11 @@ def classify_intent(inp: ClassifyInput, settings: Settings) -> Classified:
     )
     notes = intent.intent_findings(req, contracts)
     check = check.model_copy(update={"findings": [*check.findings, *notes]})
-    runs.write_json(inp.run_dir, "request.json", {"request": req.model_dump(), "input": check})
+    runs.write_json(
+        inp.run_dir,
+        "request.json",
+        {"request": req.model_dump(mode="json"), "input": check.model_dump(mode="json")},
+    )
     runs.log_line(
         inp.run_dir,
         "intent",

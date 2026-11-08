@@ -93,7 +93,7 @@ All values in T€. Base figures for Plan 2027:
 - **Reply:** German mail with summary, table, sources, calculation path per covenant, notes.
 - **Thread handling:** missing input → ask; follow-up in the thread completes the request; revised plan → new run from scratch.
 - **Orchestration:** Temporal (durable steps, retries, waiting for follow-ups), plus a direct `.eml` runner.
-- **Observability:** console log, run folder, Temporal Web UI, Langfuse traces for LLM calls.
+- **Observability:** structured log, run folder (incl. pseudonymised LLM calls), Temporal Web UI; Langfuse deferred (D13).
 - **Security:** sender allowlist (open in demo mode), SPF/DKIM/DMARC result logged, no attachment parsing for rejected mail.
 - **Deployment:** `docker compose up`, runnable on a laptop or a small cloud VM.
 
@@ -110,7 +110,7 @@ Python 3.12. Versions checked on PyPI on 6 Nov 2026; lower bounds in `pyproject.
 | Purpose | Choice |
 |---|---|
 | Orchestration | `temporalio` 1.35 (incl. pydantic data converter, test environment) |
-| LLM / tracing | `openai` 3.x (structured outputs) · `langfuse` 5.x (optional), API details checked before coding |
+| LLM | `openai` 3.x (structured outputs), API details checked before coding |
 | Excel / PDF | `openpyxl` 3.1 · `pdfplumber` 0.11 |
 | Models / settings | `pydantic` 2.14 · `pydantic-settings` 2.16 |
 | Mail | `imap-tools` 1.16 · stdlib `email` + `smtplib` |
@@ -121,7 +121,6 @@ Python 3.12. Versions checked on PyPI on 6 Nov 2026; lower bounds in `pyproject.
 |---|---|
 | Temporal | dev server in Docker (SQLite on a volume, UI :8233) |
 | OpenAI | API key from the user's account, model via `OPENAI_MODEL` |
-| Langfuse | Langfuse Cloud, EU region, free tier; off if no keys |
 | Mailbox | new **Gmail** account, IMAP/SMTP with an app password (2-step verification) |
 | Git | private GitHub repo, read access for the reviewers |
 | VM (optional) | e.g. Hetzner CX22 |
@@ -137,12 +136,12 @@ Not used on purpose: `tenacity` (Temporal + OpenAI SDK retry), `msoffcrypto-tool
 6. Contract text extraction (page cache) → LLM extraction → quote validation + completeness check → reviewed profiles; eval against the hand-written profiles
 7. Mail parsing, intent, reply rendering (LLM + template fallback), number check, direct runner `finn process mail.eml`
 8. Temporal workflow + activities, IMAP poller, idempotent SMTP send, thread handling
-9. Langfuse tracing, run folder, structured logs
+9. Structured logs + run folder; Langfuse deferred (D13)
 10. Docker Compose, README (DE), note (DE), time log; end-to-end test from an external address; optional VM deploy
 
 ## 8. Open items
 - ~~Mailbox provider~~ → Gmail with app password (decided). To do: create the account, enable 2-step verification, create the app password; test before the demo that replies don't land in spam.
-- ~~Langfuse~~ → Langfuse Cloud EU (decided). To do: create the account and keys.
+- ~~Langfuse~~ → deferred to the roadmap (D13); observability = run folder + Temporal UI + logs.
 - OpenAI model choice: configurable; pick when implementing (check current models).
-- Check the APIs of `openai` 3.x and `langfuse` 5.x (major versions newer than prior experience) and the Temporal Docker image tag before coding.
+- Check the API of `openai` 3.x (major version newer than prior experience) and the Temporal Docker image tag before coding.
 - V4 plan deadline: "within 30 days of drawing up the plan" may already have passed if the 15.10.2026 draft counts. Flag it, don't decide it.

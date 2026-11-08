@@ -1,8 +1,7 @@
 # Finn runtime: Temporal dev server + worker + poller (ARCHITECTURE.md §13).
 #   docker compose up -d                                core stack
-#   docker compose --profile observability up -d        + self-hosted Langfuse (tracing)
 #   docker compose run --rm finn-worker ping            end-to-end check (prints "pong")
-#   Temporal UI: http://localhost:8233 · Langfuse UI: http://localhost:3000 (localhost only)
+#   Temporal UI: http://localhost:8233 (localhost only)
 
 name: finn
 
@@ -14,7 +13,6 @@ x-finn: &finn
       required: false     # the stack also starts without one
   environment:
     TEMPORAL_ADDRESS: temporal:7233
-    LANGFUSE_HOST: http://langfuse-web:3000   # unreachable without the profile → tracing off
   depends_on:
     temporal:
       condition: service_healthy
@@ -58,147 +56,98 @@ services:
     volumes:
       - ./runs:/app/runs
 
-  # ── Self-hosted Langfuse (optional): `--profile observability` ─────────────────────
-  # Trimmed from langfuse/langfuse docker-compose.yml (v4, no AI gateway). All ports on
-  # localhost; secrets from .env (LF_*), project API keys created headless on first start.
-  langfuse-web:
-    profiles: [observability]
-    image: docker.langfuse.com/langfuse/langfuse:${LANGFUSE_IMAGE_TAG:-4}
-    restart: unless-stopped
-    depends_on: &langfuse-deps
-      postgres: {condition: service_healthy}
-      clickhouse: {condition: service_healthy}
-      redis: {condition: service_healthy}
-      minio: {condition: service_healthy}
-    ports:
-      - "127.0.0.1:3000:3000"
-    healthcheck:   # gates the worker (web runs the DB migrations); Next.js binds to the container IP, not localhost
-      test: ["CMD", "node", "-e", "fetch('http://'+require('os').hostname()+':3000/api/public/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
-      interval: 5s
-      timeout: 5s
-      retries: 30
-      start_period: 20s
-    environment: &langfuse-env
-      NEXTAUTH_URL: http://localhost:3000
-      NEXTAUTH_SECRET: ${LF_NEXTAUTH_SECRET:-changeme}
-      DATABASE_URL: postgresql://postgres:${LF_POSTGRES_PASSWORD:-postgres}@postgres:5432/postgres
-      SALT: ${LF_SALT:-changeme}
-      ENCRYPTION_KEY: ${LF_ENCRYPTION_KEY:-0000000000000000000000000000000000000000000000000000000000000000}
-      TELEMETRY_ENABLED: "false"
-      CLICKHOUSE_MIGRATION_URL: clickhouse://clickhouse:9000
-      CLICKHOUSE_URL: http://clickhouse:8123
-      CLICKHOUSE_USER: clickhouse
-      CLICKHOUSE_PASSWORD: ${LF_CLICKHOUSE_PASSWORD:-clickhouse}
-      CLICKHOUSE_CLUSTER_ENABLED: "false"
-      REDIS_HOST: redis
-      REDIS_PORT: "6379"
-      REDIS_AUTH: ${LF_REDIS_PASSWORD:-redis}
-      LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse
-      LANGFUSE_S3_EVENT_UPLOAD_REGION: auto
-      LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: minio
-      LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: ${LF_MINIO_PASSWORD:-miniosecret}
-      LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://minio:9000
-      LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
-      LANGFUSE_S3_EVENT_UPLOAD_PREFIX: events/
-      LANGFUSE_S3_MEDIA_UPLOAD_BUCKET: langfuse
-      LANGFUSE_S3_MEDIA_UPLOAD_REGION: auto
-      LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID: minio
-      LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY: ${LF_MINIO_PASSWORD:-miniosecret}
-      LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://minio:9000
-      LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: "true"
-      LANGFUSE_S3_MEDIA_UPLOAD_PREFIX: media/
-      # Headless init: org, project, API keys (= Finn's LANGFUSE_* keys) and the admin login
-      LANGFUSE_INIT_ORG_ID: finn
-      LANGFUSE_INIT_ORG_NAME: Finn
-      LANGFUSE_INIT_PROJECT_ID: finn-covenants
-      LANGFUSE_INIT_PROJECT_NAME: Finn Covenant-Prüfung
-      LANGFUSE_INIT_PROJECT_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
-      LANGFUSE_INIT_PROJECT_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
-      LANGFUSE_INIT_USER_EMAIL: ${LF_ADMIN_EMAIL:-}
-      LANGFUSE_INIT_USER_NAME: Admin
-      LANGFUSE_INIT_USER_PASSWORD: ${LF_ADMIN_PASSWORD:-}
-
-  langfuse-worker:
-    profiles: [observability]
-    image: docker.langfuse.com/langfuse/langfuse-worker:${LANGFUSE_IMAGE_TAG:-4}
-    restart: unless-stopped
-    depends_on:
-      <<: *langfuse-deps
-      langfuse-web: {condition: service_healthy}
-    environment: *langfuse-env
-
-  postgres:
-    profiles: [observability]
-    image: postgres:17
-    restart: unless-stopped
+  # ── Local test mail server (optional): `--profile testmail` (ARCHITECTURE §13.1) ──────
+  # GreenMail (SMTP + IMAP, in memory) + Roundcube (webmail) + Finn's own worker / poller for
+  # it, so test mail never touches the real mailbox or the real worker: own env file (only test
+  # passwords), own task queue `finn-testmail`, own runs folder, own image tag. Start without
+  # touching the core services:
+  #   docker compose --profile testmail up -d --build --no-deps \
+  #     greenmail roundcube finn-worker-testmail finn-poller-testmail
+  greenmail:
+    profiles: [testmail]
+    image: greenmail/standalone:2.1.15
+    # Auth enabled (no greenmail.auth.disabled): only these passwords work; login = full address.
+    # Any other recipient gets a mailbox on first delivery (login and password = its address).
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${LF_POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: postgres
-      TZ: UTC
-      PGTZ: UTC
-    volumes:
-      - langfuse-postgres:/var/lib/postgresql/data
+      GREENMAIL_OPTS: >-
+        -Dgreenmail.setup.test.smtp -Dgreenmail.setup.test.imap
+        -Dgreenmail.hostname=0.0.0.0
+        -Dgreenmail.users.login=email
+        -Dgreenmail.users=finn:finn-test@finn.test,finn-pytest:finn-test@finn.test,cfo:cfo-test@stadtwerke.test,blocked:blocked-test@stadtwerke.test,eve:eve-test@unbekannt.test
+    ports:
+      - "127.0.0.1:3025:3025"   # SMTP (plain, AUTH PLAIN/LOGIN; no STARTTLS)
+      - "127.0.0.1:3143:3143"   # IMAP (plain; MOVE, UIDPLUS, no SPECIAL-USE)
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/3143 && exec 4<>/dev/tcp/127.0.0.1/3025"]
       interval: 3s
       timeout: 3s
-      retries: 10
-
-  clickhouse:
-    profiles: [observability]
-    image: clickhouse/clickhouse-server:26.3.62.3
+      retries: 20
+      start_period: 5s
     restart: unless-stopped
-    user: "101:101"
+
+  roundcube:
+    profiles: [testmail]
+    image: roundcube/roundcubemail:1.7.5-apache
+    depends_on:
+      greenmail: {condition: service_healthy}
     environment:
-      CLICKHOUSE_DB: default
-      CLICKHOUSE_USER: clickhouse
-      CLICKHOUSE_PASSWORD: ${LF_CLICKHOUSE_PASSWORD:-clickhouse}
+      ROUNDCUBEMAIL_DEFAULT_HOST: greenmail     # no "ssl://" prefix: plain IMAP
+      ROUNDCUBEMAIL_DEFAULT_PORT: "3143"
+      ROUNDCUBEMAIL_SMTP_SERVER: greenmail
+      ROUNDCUBEMAIL_SMTP_PORT: "3025"
+      ROUNDCUBEMAIL_DB_TYPE: sqlite
+      ROUNDCUBEMAIL_SKIN: elastic
     volumes:
-      - langfuse-clickhouse:/var/lib/clickhouse
-      - langfuse-clickhouse-logs:/var/log/clickhouse-server
-    healthcheck:
-      test: wget --no-verbose --tries=1 --spider http://localhost:8123/ping || exit 1
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 1s
-
-  redis:
-    profiles: [observability]
-    image: redis:7
+      - ./docker/roundcube/testmail.inc.php:/var/roundcube/config/testmail.inc.php:ro
+    ports:
+      - "127.0.0.1:8080:80"     # http://localhost:8080, login e.g. cfo@stadtwerke.test / cfo-test
     restart: unless-stopped
-    command: ["--requirepass", "${LF_REDIS_PASSWORD:-redis}", "--maxmemory-policy", "noeviction"]
-    volumes:
-      - langfuse-redis:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${LF_REDIS_PASSWORD:-redis}", "ping"]
-      interval: 3s
-      timeout: 10s
-      retries: 10
 
-  minio:
-    profiles: [observability]
-    image: cgr.dev/chainguard/minio
-    restart: unless-stopped
-    entrypoint: sh
-    command: -c 'mkdir -p /data/langfuse && minio server --address ":9000" --console-address ":9001" /data'
+  finn-worker-testmail:
+    <<: *finn
+    profiles: [testmail]
+    image: finn:testmail        # own tag: rebuilding it never touches the running finn:dev stack
+    env_file:
+      - path: .env.testmail.example   # committed, test passwords only: works out of the box
+      - path: .env.testmail           # optional local overrides (git-ignored), e.g. a real key
+        required: false
     environment:
-      MINIO_ROOT_USER: minio
-      MINIO_ROOT_PASSWORD: ${LF_MINIO_PASSWORD:-miniosecret}
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_TASK_QUEUE: finn-testmail
+      # LLM mode, set by `finn demo send-cases [--real-llm]` / `pytest -m mailserver
+      # --mail-driver compose [--real-llm]`: stand-in by default; the key only for --real-llm.
+      FINN_LLM_FAKE: ${TESTMAIL_LLM_FAKE:-true}
+      OPENAI_API_KEY: ${TESTMAIL_OPENAI_API_KEY:-}
+    depends_on:
+      temporal: {condition: service_healthy}
+      greenmail: {condition: service_healthy}
+    command: ["worker"]
     volumes:
-      - langfuse-minio:/data
-    healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
-      interval: 1s
-      timeout: 5s
-      retries: 5
-      start_period: 1s
+      - ./runs-testmail:/app/runs
+      - ./data/contract_profiles:/app/data/contract_profiles:ro
+      - ./material:/app/material:ro
+
+  finn-poller-testmail:
+    <<: *finn
+    profiles: [testmail]
+    image: finn:testmail
+    env_file:
+      - path: .env.testmail.example
+      - path: .env.testmail
+        required: false
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_TASK_QUEUE: finn-testmail
+      # LLM mode, set by `finn demo send-cases [--real-llm]` / `pytest -m mailserver
+      # --mail-driver compose [--real-llm]`: stand-in by default; the key only for --real-llm.
+      FINN_LLM_FAKE: ${TESTMAIL_LLM_FAKE:-true}
+      OPENAI_API_KEY: ${TESTMAIL_OPENAI_API_KEY:-}
+    depends_on:
+      temporal: {condition: service_healthy}
+      greenmail: {condition: service_healthy}
+    command: ["poller"]
+    volumes:
+      - ./runs-testmail:/app/runs
 
 volumes:
   temporal-data:
-  langfuse-postgres:
-  langfuse-clickhouse:
-  langfuse-clickhouse-logs:
-  langfuse-redis:
-  langfuse-minio:

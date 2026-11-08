@@ -7,8 +7,14 @@ Gmail specifics (verified Nov 2026), handled generically where possible:
   first use) with `UID MOVE` (RFC 6851; COPY + \\Deleted + EXPUNGE without MOVE). On Gmail this
   swaps the label; the mail stays in "All Mail". Custom IMAP keywords are not reliable on Gmail,
   folders are, and the state stays visible to a human in the web UI.
-- The Sent folder is found by its `\\Sent` SPECIAL-USE flag (the name is localised); `was_sent`
-  searches it by Message-ID (`X-GM-RAW rfc822msgid:` on Gmail, `HEADER Message-ID` elsewhere).
+- The Sent folder is found by its `\\Sent` SPECIAL-USE flag (the name is localised), else by
+  `IMAP_SENT_FOLDER` or a common name; `was_sent` searches it by Message-ID (`X-GM-RAW
+  rfc822msgid:` on Gmail, `HEADER Message-ID` elsewhere).
+- Gmail's SMTP files every sent mail in "Gesendet" itself; other servers (GreenMail, many
+  hosters) don't, so Finn APPENDs its reply there (`IMAP_APPEND_SENT`, auto = not on Gmail);
+  otherwise `was_sent` could never find it.
+- Transport: IMAPS and SMTPS / STARTTLS by default; `IMAP_SSL=false` / `SMTP_SECURITY=plain`
+  only for the local test server (compose profile `testmail`).
 - Bodies are fetched with `BODY.PEEK[]` (no \\Seen flag); mails above the size limit only with
   their header (MAIL_TOO_LARGE).
 """
@@ -18,9 +24,11 @@ import imaplib
 import re
 import smtplib
 import ssl
+import time
 from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import UTC, datetime
+from email.message import EmailMessage
 
 import structlog
 
@@ -40,6 +48,8 @@ _MONTHS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct",
 _LIST = re.compile(rb'^\((?P<flags>[^)]*)\)\s+(?P<delim>"[^"]*"|NIL)\s+(?P<name>.+)$')
 _FETCH_SIZE = re.compile(rb"RFC822\.SIZE (\d+)")
 _TIMEOUT = 60
+# Sent folder names for servers without SPECIAL-USE (RFC 6154), in order of preference.
+SENT_NAMES = ("Sent", "Sent Items", "Sent Messages", "Gesendet", "Gesendete Elemente", "INBOX.Sent")
 
 
 def imap_date(d: datetime) -> str:
@@ -81,13 +91,13 @@ class ImapSmtpConnector:
 
     def __init__(self, settings: Settings) -> None:
         self.s = settings
-        self._imap: imaplib.IMAP4_SSL | None = None
+        self._imap: imaplib.IMAP4 | None = None
         self._caps: set[str] = set()
         self._sent_folder: str | None = None
 
     # ── connection ──────────────────────────────────────────────────────────
 
-    def _conn(self) -> imaplib.IMAP4_SSL:
+    def _conn(self) -> imaplib.IMAP4:
         if self._imap is not None:
             try:
                 self._imap.noop()
@@ -96,8 +106,12 @@ class ImapSmtpConnector:
                 self.close()
         if not self.s.imap_user or self.s.imap_password is None:
             raise MailAuthError("IMAP_USER / IMAP_PASSWORD not set")
+        conn: imaplib.IMAP4
         try:
-            conn = imaplib.IMAP4_SSL(self.s.imap_host, self.s.imap_port, timeout=_TIMEOUT)
+            if self.s.imap_ssl:
+                conn = imaplib.IMAP4_SSL(self.s.imap_host, self.s.imap_port, timeout=_TIMEOUT)
+            else:  # local test server only (GreenMail)
+                conn = imaplib.IMAP4(self.s.imap_host, self.s.imap_port, timeout=_TIMEOUT)
         except (OSError, imaplib.IMAP4.error) as exc:
             raise MailConnectionError(f"IMAP connect {self.s.imap_host}: {exc}") from exc
         try:
@@ -187,7 +201,7 @@ class ImapSmtpConnector:
             return messages
 
     def _fetch_one(
-        self, conn: imaplib.IMAP4_SSL, uid: str, validity: int, limit: int
+        self, conn: imaplib.IMAP4, uid: str, validity: int, limit: int
     ) -> InboundMessage | None:
         typ, data = conn.uid("FETCH", uid, "(RFC822.SIZE)")
         size = 0
@@ -241,12 +255,42 @@ class ImapSmtpConnector:
         log.info("imap_folder_created", folder=name)
 
     def sent_folder(self) -> str | None:
+        """Raw name of the Sent folder (see `pick_sent_folder`); None if there is none."""
         if self._sent_folder is None:
             with self._errors("list"):
-                self._sent_folder = next(
-                    (name for flags, name in self._folders() if "\\sent" in flags), None
-                )
+                self._sent_folder = pick_sent_folder(self._folders(), self.s.imap_sent_folder)
         return self._sent_folder
+
+    @property
+    def is_gmail(self) -> bool:
+        return "X-GM-EXT-1" in self._caps
+
+    def append_sent_enabled(self) -> bool:
+        """IMAP_APPEND_SENT: auto = APPEND unless the server is Gmail (files sent mail itself)."""
+        if self.s.imap_append_sent == "auto":
+            with self._errors("capability"):
+                self._conn()
+            return not self.is_gmail
+        return self.s.imap_append_sent == "true"
+
+    def _append_sent(self, mime: EmailMessage) -> None:
+        """Copy the sent reply into the Sent folder (created if missing). A failure is logged,
+        not raised: the mail is out, and the local sent marker still prevents a resend."""
+        try:
+            with self._errors("append_sent"):
+                folder = self.sent_folder()
+                if folder is None:
+                    name = self.s.imap_sent_folder or SENT_NAMES[0]
+                    self._ensure_folder(name)
+                    folder = self._sent_folder = _utf7_encode(name)
+                typ, data = self._conn().append(
+                    f'"{folder}"', r"(\Seen)", imaplib.Time2Internaldate(time.time()),
+                    mime.as_bytes(),
+                )  # fmt: skip
+                if typ != "OK":
+                    raise MailConnectionError(f"APPEND {folder}: {data!r}")
+        except (MailConnectionError, MailAuthError) as exc:
+            log.warning("imap_append_sent_failed", error=str(exc))
 
     def was_sent(self, message_id: str) -> bool:
         mid = message_id.strip("<>")
@@ -259,7 +303,7 @@ class ImapSmtpConnector:
             typ, data = conn.select(f'"{folder}"', readonly=True)  # raw name from LIST
             if typ != "OK":
                 raise MailConnectionError(f"SELECT {folder}: {data!r}")
-            if "X-GM-EXT-1" in self._caps:
+            if self.is_gmail:
                 typ, data = conn.uid("SEARCH", "X-GM-RAW", f'"rfc822msgid:<{mid}>"')
             else:
                 typ, data = conn.uid("SEARCH", "HEADER", "Message-ID", f'"<{mid}>"')
@@ -275,13 +319,17 @@ class ImapSmtpConnector:
             date=datetime.now(UTC),
         )
         password = self.s.smtp_password.get_secret_value()
+        security = self.s.smtp_security
+        if security == "auto":
+            security = "ssl" if self.s.smtp_port == 465 else "starttls"
         try:
             smtp: smtplib.SMTP
-            if self.s.smtp_port == 465:
+            if security == "ssl":
                 smtp = smtplib.SMTP_SSL(self.s.smtp_host, self.s.smtp_port, timeout=_TIMEOUT)
             else:
                 smtp = smtplib.SMTP(self.s.smtp_host, self.s.smtp_port, timeout=_TIMEOUT)
-                smtp.starttls(context=ssl.create_default_context())
+                if security == "starttls":
+                    smtp.starttls(context=ssl.create_default_context())
             with smtp:
                 smtp.login(self.s.smtp_user, password)
                 smtp.send_message(mime, from_addr=self.s.smtp_user, to_addrs=[reply.to])
@@ -290,3 +338,16 @@ class ImapSmtpConnector:
         except (smtplib.SMTPException, OSError) as exc:
             raise MailConnectionError(f"SMTP send: {type(exc).__name__}: {exc}") from exc
         log.info("mail_sent", message_id=reply.message_id, kind=reply.kind)
+        if self.append_sent_enabled():
+            self._append_sent(mime)
+
+
+def pick_sent_folder(folders: list[tuple[set[str], str]], configured: str = "") -> str | None:
+    """The `\\Sent` SPECIAL-USE folder (localised names on Gmail), else IMAP_SENT_FOLDER, else a
+    common name (case-insensitive). `folders` = (lower-case flags, raw name) as from LIST."""
+    flagged = next((name for flags, name in folders if "\\sent" in flags), None)
+    if flagged is not None:
+        return flagged
+    names = {name.lower(): name for _, name in folders}
+    wanted = [_utf7_encode(configured)] if configured else []
+    return next((names[c.lower()] for c in [*wanted, *SENT_NAMES] if c.lower() in names), None)

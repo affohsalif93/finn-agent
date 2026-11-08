@@ -1,17 +1,58 @@
-{#- HTML part: inline CSS only, simple tables (Outlook-safe), no JavaScript, no images. -#}
-{% set font = "font-family:Calibri,Arial,Helvetica,sans-serif;" %}
-{% set mono = "font-family:Consolas,'Courier New',monospace;font-size:13px;" %}
-{% set h2 = font ~ "font-size:15px;font-weight:bold;color:#1B2430;margin:22px 0 6px 0;" %}
-{% set p = font ~ "font-size:14px;line-height:1.45;color:#1B2430;margin:0 0 8px 0;" %}
-{% set colors = {"met": "#2E7D4F", "tight": "#8A4B00", "breached": "#B3261E", "open": "#46505E"} %}
+{#- HTML part, visual language of material/Demo_Finn_Covenant-Pruefung.html (MAIL_ERGEBNIS).
+    Outlook / Gmail safe: inline CSS only, tables for layout, no <style>, no JavaScript, no images;
+    status dots are coloured characters. -#}
+{% set font = "font-family:Aptos,Calibri,'Segoe UI',Arial,Helvetica,sans-serif;" %}
+{% set ink = "#1F1F1F" %}{% set sub = "#616161" %}{% set mute = "#8A8A8A" %}{% set line = "#DADADA" %}
+{% set p = font ~ "font-size:14px;line-height:1.5;color:" ~ ink ~ ";margin:0 0 10px 0;" %}
+{% set h4 = font ~ "font-size:14px;font-weight:bold;color:" ~ ink ~ ";margin:16px 0 6px 0;" %}
+{% set small = font ~ "font-size:12px;line-height:1.5;color:" ~ sub ~ ";" %}
+{% set tones = {"info": ("#F3F8FD", "#0F6CBD"), "warn": ("#FFF8E6", "#D99A1E"),
+                "bad": ("#FDF0F0", "#C62828"), "neutral": ("#F5F5F5", "#8A8A8A")} %}
+{% set dots = {"met": "#2E9E5B", "tight": "#D99A1E", "breached": "#C62828", "open": "#8A8A8A"} %}
+{% set th = "text-align:left;font-weight:600;background:#F3F3F3;color:#424242;padding:5px 7px;border:1px solid " ~ line ~ ";font-size:12px;white-space:nowrap;" %}
+{% set td = "padding:5px 7px;border:1px solid " ~ line ~ ";vertical-align:middle;" %}
+{% set lab = "color:" ~ sub ~ ";padding:3px 14px 3px 0;vertical-align:top;white-space:nowrap;width:130px;" %}
+{% set val = "padding:3px 0;vertical-align:top;color:" ~ ink ~ ";" %}
+{% macro inputs_table(rows) %}
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;{{ font }}font-size:13px;">
+<tr>
+<td style="color:{{ sub }};font-size:12px;padding:0 18px 2px 0;">Position</td>
+<td align="right" style="color:{{ sub }};font-size:12px;padding:0 18px 2px 0;">T€</td>
+<td style="color:{{ sub }};font-size:12px;padding:0 0 2px 0;">Zelle</td>
+</tr>
+{% for r in rows %}
+{% set rule = "border-top:1px solid " ~ line ~ ";font-weight:bold;" if r.subtotal else "" %}
+<tr>
+<td style="padding:1px 18px 1px 0;white-space:nowrap;{{ rule }}"{% if r.title %} title="{{ r.title }}"{% endif %}>{{ r.label }}</td>
+<td align="right" style="padding:1px 18px 1px 0;white-space:nowrap;font-variant-numeric:tabular-nums;{{ rule }}">{{ r.value }}</td>
+<td style="padding:1px 0;white-space:nowrap;color:{{ sub }};{{ rule }}">{{ r.cell }}</td>
+</tr>
+{% endfor %}
+</table>
+{% endmacro %}
+{% macro block_head(anchor, title, head, color) %}
+<a name="{{ anchor }}" id="{{ anchor }}"></a>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;margin:18px 0 6px 0;border-top:2px solid {{ color }};{{ font }}font-size:14px;color:{{ ink }};">
+<tr><td style="padding:6px 0 2px 0;font-weight:bold;">{{ title }}</td>
+<td align="right" style="padding:6px 0 2px 12px;white-space:nowrap;">{{ head }}</td></tr>
+</table>
+{% endmacro %}
 <!DOCTYPE html>
 <html lang="de">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head>
 <body style="margin:0;padding:0;background:#FFFFFF;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:780px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:820px;">
 <tr><td style="padding:16px 20px;">
 <p style="{{ p }}">{{ salutation }}</p>
 <p style="{{ p }}">{{ intro }}</p>
+{% if summary %}
+{% set bg, border = tones[tone] %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;margin:0 0 12px 0;">
+<tr><td style="background:{{ bg }};border-left:3px solid {{ border }};padding:8px 12px;{{ font }}font-size:14px;line-height:1.5;color:{{ ink }};">
+{% for s in summary %}{% if loop.first and kind == "result" %}<b>Ergebnis:</b> {% endif %}{{ s }}{% if not loop.last %} {% endif %}{% endfor %}
+{% if early_warning %}<br><span style="color:{{ sub }};font-size:13px;"><i>{{ early_warning }}</i></span>{% endif %}
+</td></tr></table>
+{% endif %}
 {% if items %}
 <ul style="{{ p }}padding-left:20px;">
 {% for item in items %}
@@ -19,89 +60,80 @@
 {% endfor %}
 </ul>
 {% endif %}
-{% if checked %}
-<p style="{{ h2 }}">Geprüfte Eingabe</p>
-<p style="{{ p }}">{% for line in checked %}{{ line }}{% if not loop.last %}<br>{% endif %}{% endfor %}</p>
-{% if input_status %}
-<p style="{{ p }}">{{ input_status }}</p>
-{% endif %}
-{% endif %}
-{% if warnings %}
-<table role="presentation" width="100%" cellpadding="8" cellspacing="0" border="0" style="background:#FFF4D6;border-left:3px solid #8A4B00;margin:0 0 8px 0;">
-<tr><td style="{{ font }}font-size:14px;color:#1B2430;"><b>Achtung</b><br>
-{% for w in warnings %}{{ w }}{% if not loop.last %}<br>{% endif %}{% endfor %}
-</td></tr></table>
-{% endif %}
-{% if infos %}
-<p style="{{ p }}color:#46505E;"><b>Hinweise zur Eingabe:</b><br>
-{% for i in infos %}{{ i }}{% if not loop.last %}<br>{% endif %}{% endfor %}</p>
-{% endif %}
-{% if summary %}
-<p style="{{ h2 }}">Ergebnis</p>
-{% for s in summary %}
-<p style="{{ p }}">{{ s }}</p>
-{% endfor %}
-{% if early_warning %}
-<p style="{{ p }}color:#46505E;"><i>{{ early_warning }}</i></p>
-{% endif %}
-{% endif %}
 {% if rows %}
-<table cellpadding="6" cellspacing="0" border="1" style="border-collapse:collapse;border-color:#DEE2E7;{{ font }}font-size:13px;color:#1B2430;margin:10px 0 4px 0;">
-<tr style="background:#F4F5F7;">
-{% for h in table_headers %}
-<th align="left" style="border:1px solid #DEE2E7;">{{ h }}</th>
+<table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%;{{ font }}font-size:13px;color:{{ ink }};margin:2px 0 6px 0;">
+<tr>
+<th style="{{ th }}">{{ table_headers[0] }}</th>
+{% for h in table_headers[1:4] %}
+<th style="{{ th }}text-align:right;">{{ h }}</th>
 {% endfor %}
+<th style="{{ th }}">{{ table_headers[4] }}</th>
 </tr>
 {% for r in rows %}
+{% set hl = "background:#FFF4D6;" if r.highlight else "" %}
 <tr>
-<td style="border:1px solid #DEE2E7;">{{ r.contract }}</td>
-<td style="border:1px solid #DEE2E7;">{{ r.covenant }}</td>
-<td align="right" style="border:1px solid #DEE2E7;white-space:nowrap;"><b>{{ r.value }}</b></td>
-<td align="right" style="border:1px solid #DEE2E7;white-space:nowrap;">{{ r.threshold }}</td>
-<td align="right" style="border:1px solid #DEE2E7;white-space:nowrap;">{{ r.headroom }}</td>
-<td style="border:1px solid #DEE2E7;color:{{ colors[r.status] }};white-space:nowrap;"><b>{{ r.met }}</b></td>
+<td style="{{ td }}{{ hl }}"><div style="font-size:11px;color:{{ sub }};">{{ r.contract }}</div><div style="font-weight:600;"><a href="#{{ r.anchor }}" style="color:{{ ink }};text-decoration:none;">{{ r.covenant }}</a>{{ r.mark }}</div></td>
+<td align="right" style="{{ td }}{{ hl }}white-space:nowrap;">{% if r.highlight %}<b>{{ r.value }}</b>{% else %}{{ r.value }}{% endif %}</td>
+<td align="right" style="{{ td }}{{ hl }}white-space:nowrap;">{{ r.threshold }}</td>
+<td align="right" style="{{ td }}{{ hl }}white-space:nowrap;">{% if r.highlight %}<b>{{ r.headroom }}</b>{% else %}{{ r.headroom }}{% endif %}</td>
+<td style="{{ td }}{{ hl }}white-space:nowrap;"><span style="color:{{ dots[r.status] }};font-size:15px;line-height:1;">&#9679;</span>&nbsp;{{ r.met }}</td>
 </tr>
 {% endfor %}
 </table>
 {% endif %}
-{% if paths %}
-<p style="{{ h2 }}">Rechenweg</p>
-{% for b in paths %}
-<p style="{{ p }}margin-top:14px;"><b>{{ b.title }}</b> – {{ b.status }}</p>
-{% if b.source %}
-<p style="{{ p }}font-size:13px;color:#46505E;">Vertrag: {{ b.source }}</p>
-{% endif %}
-{% if b.more_sources %}
-<p style="{{ p }}font-size:13px;color:#46505E;">{{ b.more_sources }}</p>
-{% endif %}
-{% if b.formula %}
-<p style="{{ mono }}margin:0 0 4px 0;color:#1B2430;"><b>{{ b.formula }}</b></p>
-{% endif %}
-{% for s in b.sub_formulas %}
-<p style="{{ mono }}margin:0 0 4px 0;color:#1B2430;">{{ s }}</p>
-{% endfor %}
-{% for l in b.lines %}
-<p style="{{ mono }}margin:0 0 0 {{ 18 * l.level }}px;color:{{ '#7F8894' if l.muted else '#1B2430' }};">{{ l.text }}</p>
-{% endfor %}
-{% for n in b.notes %}
-<p style="{{ p }}font-size:13px;margin:4px 0 0 0;color:#46505E;">{{ n }}</p>
-{% endfor %}
-{% endfor %}
+{% if footnotes %}
+<p style="{{ small }}margin:0 0 10px 0;">{% for f in footnotes %}{{ f }}{% if not loop.last %}<br>{% endif %}{% endfor %}</p>
 {% endif %}
 {% if notes %}
-<p style="{{ h2 }}">Hinweise</p>
+<p style="{{ h4 }}">Hinweise</p>
 <ul style="{{ p }}padding-left:20px;">
 {% for n in notes %}
 <li style="margin:0 0 4px 0;">{{ n }}</li>
 {% endfor %}
 </ul>
 {% endif %}
-{% for c in closing %}
-<p style="{{ p }}">{{ c }}</p>
+{% if paths %}
+<p style="{{ h4 }}">Rechenweg und Quellen</p>
+<p style="{{ p }}">Je Covenant mit Vertragsstelle, Formel und Eingangswerten:<br>
+{% for l in links %}<a href="#{{ l.anchor }}" style="color:#0F6CBD;text-decoration:underline;">{{ l.label }}</a>{% if not loop.last %} · {% endif %}{% endfor %}</p>
+{% for b in paths %}
+{{ block_head(b.anchor, b.title, b.head, dots[b.status]) }}
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;{{ font }}font-size:13px;line-height:1.45;">
+{% if b.source %}<tr><td style="{{ lab }}">Quelle im Vertrag</td><td style="{{ val }}">{{ b.source }}</td></tr>{% endif %}
+{% if b.formula %}<tr><td style="{{ lab }}">Formel</td><td style="{{ val }}">{{ b.formula }}</td></tr>{% endif %}
+{% if b.inputs %}<tr><td style="{{ lab }}">Eingangswerte</td><td style="{{ val }}">{{ inputs_table(b.inputs) }}</td></tr>{% endif %}
+<tr><td style="{{ lab }}">Ergebnis</td><td style="{{ val }}">{{ b.result }}</td></tr>
+{% for s in b.specials %}
+<tr><td style="{{ lab }}">{% if loop.first %}Besonderheit{% endif %}</td><td style="{{ val }}">{{ s }}</td></tr>
 {% endfor %}
-<p style="{{ p }}margin-top:16px;">Mit freundlichen Grüßen<br>Finn</p>
-<p style="{{ font }}font-size:12px;color:#7F8894;margin:18px 0 0 0;border-top:1px solid #DEE2E7;padding-top:8px;">
-{% for f in footer %}{{ f }}{% if not loop.last %}<br>{% endif %}{% endfor %}</p>
+</table>
+{% endfor %}
+{% for e in ebitda %}
+{{ block_head(e.anchor, e.title, "", "#8A8A8A") }}
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;{{ font }}font-size:13px;line-height:1.45;">
+<tr><td style="{{ lab }}">Verwendet in</td><td style="{{ val }}">{{ e.used_by }}</td></tr>
+<tr><td style="{{ lab }}">Eingangswerte</td><td style="{{ val }}">{{ inputs_table(e.inputs) }}</td></tr>
+{% for s in e.specials %}
+<tr><td style="{{ lab }}">{% if loop.first %}Besonderheit{% endif %}</td><td style="{{ val }}">{{ s }}</td></tr>
+{% endfor %}
+</table>
+{% endfor %}
+{% endif %}
+{% if next_step %}
+<p style="{{ p }}margin-top:16px;">{% if kind != "result" %}<b>So geht es weiter:</b> {% endif %}{{ next_step }}</p>
+{% endif %}
+<p style="{{ p }}margin-top:16px;">Mit freundlichen Grüßen</p>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:4px 0 0 0;{{ font }}">
+<tr><td style="font-size:14px;font-weight:bold;color:{{ ink }};">Finn</td></tr>
+<tr><td style="padding:3px 0 5px 0;"><div style="width:36px;height:2px;background:#3B6EA8;font-size:0;line-height:0;">&nbsp;</div></td></tr>
+<tr><td style="font-size:12px;color:#424242;">Covenant-Prüfung (digital) · Kaufmännische Geschäftsführung</td></tr>
+{% for s in signature %}
+<tr><td style="font-size:11px;color:{{ mute }};padding-top:6px;">{{ s }}</td></tr>
+{% endfor %}
+{% for f in footer %}
+<tr><td style="font-size:11px;color:{{ mute }};padding-top:2px;">{{ f }}</td></tr>
+{% endfor %}
+</table>
 </td></tr>
 </table>
 </body>

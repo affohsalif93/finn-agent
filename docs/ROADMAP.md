@@ -115,8 +115,8 @@ Each type gets its own extractor with the same pattern (full text → schema →
 
 - Temporal in production: self-hosted with Postgres on AWS/Azure, or Temporal Cloud with **client-side payload encryption** (Temporal sees only encrypted data).
 - LLM provider failover: retries with backoff first, then a second provider with the same structured schema; validation guards schema drift. Health metrics per provider.
-- Observability: Temporal → OpenTelemetry → Langfuse for one end-to-end trace per request; evaluation datasets (extraction vs. reviewed profiles) to catch regressions when models or prompts change.
-- Data protection: EU hosting, data-processing agreements (AVV) with the LLM provider and tracing, self-hosted Langfuse option, retention rules for run folders and traces.
+- Observability (deferred, D13): Langfuse self-hosted or OpenTelemetry (Temporal → OTel → backend) for one trace per request and cost / latency / quality across runs and tenants; evaluation datasets (extraction vs. reviewed profiles) to catch regressions when models or prompts change. Learnings from the 7 Nov spike: Langfuse v4 accepts traces only via its OTel endpoint `/api/public/otel` (legacy `/api/public/ingestion` takes scores only); it needs Postgres + ClickHouse + Redis + S3 and ≥ 4 GB RAM; headless setup (org, project, API keys, admin) via `LANGFUSE_INIT_*`.
+- Data protection: EU hosting, data-processing agreements (AVV) with the LLM provider (and a tracing provider, if hosted), retention rules for run folders and traces.
   - LLM provider terms to verify before go-live: no training on API data, zero data retention, EU data residency.
   - Alternatives: Azure OpenAI in an EU region; a small self-hosted model for the intent call (simple classification).
   - NER-based anonymisation (e.g. Microsoft Presidio) for free-text mails with names and companies in the body, on top of D21.

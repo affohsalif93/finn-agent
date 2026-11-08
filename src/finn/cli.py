@@ -170,6 +170,47 @@ def process(
     typer.echo(f"Laufordner: {result.run_dir}", err=True)
 
 
+demo_app = typer.Typer(
+    help="Demo against the local test mail server (compose profile testmail).",
+    no_args_is_help=True,
+)
+app.add_typer(demo_app, name="demo")
+
+
+@demo_app.command("send-cases")
+def demo_send_cases(
+    only: Annotated[
+        list[str] | None, typer.Option("--only", help="Case name(s), e.g. --only happy.")
+    ] = None,
+    real_llm: Annotated[
+        bool, typer.Option("--real-llm", help="Test containers use OpenAI (key from .env).")
+    ] = False,
+) -> None:
+    """Send the failure-case catalogue (tests/live/cases.py) into GreenMail, let the test Finn
+    answer, write out/replies/index.html; then read the threads in Roundcube (localhost:8080).
+    Needs the repository checkout (tests/) and Docker; never touches the real mailbox."""
+    root = Path.cwd()
+    if not (root / "tests" / "live" / "demo.py").is_file():
+        typer.echo("Bitte im Repository-Wurzelverzeichnis ausführen (tests/live fehlt).", err=True)
+        raise typer.Exit(code=2)
+    for sub in ("tests", "tests/live"):
+        if str(root / sub) not in sys.path:
+            sys.path.insert(0, str(root / sub))
+    import importlib
+
+    demo = importlib.import_module("demo")  # tests/live/demo.py (not part of the package)
+
+    key = None
+    if real_llm:
+        secret = get_settings().openai_api_key
+        if secret is None:
+            typer.echo("--real-llm braucht OPENAI_API_KEY (Umgebung oder .env).", err=True)
+            raise typer.Exit(code=2)
+        key = secret.get_secret_value()
+    code = demo.send_cases(list(only or []), key, echo=typer.echo)
+    raise typer.Exit(code=int(code))
+
+
 _PROFILE_ERRORS = {
     "PROFILE_MISSING",
     "PROFILE_INVALID_RECIPE",

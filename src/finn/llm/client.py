@@ -6,9 +6,10 @@ errors, timeouts, 408/409/429/5xx) are done by the SDK (`max_retries`); everythi
 fails, a missing API key, a refusal, a truncated answer or an answer that fails validation ends
 in `LLMUnavailable`, so callers have exactly one exception to handle (template fallback, D16).
 
-`purpose`, `trace_id` and `session_id` are logged now and become Langfuse trace attributes later
-(D13: trace = workflow ID, session = mail thread). Prompts are never logged (they may hold
-contract text); only sizes, model and token usage are.
+Every call is logged in the run folder (`llm_calls.jsonl`, written by the pipeline) and the
+structured log; `purpose`, `trace_id` (= workflow ID) and `session_id` (= mail thread) label the
+log lines (D13). This log never holds prompts (they may hold contract text); only sizes, model
+and token usage.
 """
 
 import re
@@ -81,6 +82,11 @@ def complete_structured[T: BaseModel](
     settings = get_settings()
     model_name = model or settings.openai_model
     bound = log.bind(purpose=purpose, model=model_name, trace_id=trace_id, session_id=session_id)
+    if settings.finn_llm_fake:  # TEST ONLY (live mail tests, `finn demo`): no network call
+        from finn.llm import fake
+
+        bound.warning("llm_fake", reason="FINN_LLM_FAKE is set: deterministic stand-in")
+        return fake.complete(user=user, schema=schema, purpose=purpose)
     key = settings.openai_api_key.get_secret_value() if settings.openai_api_key else ""
     if not key:
         bound.warning("llm_unavailable", reason="no_api_key")
