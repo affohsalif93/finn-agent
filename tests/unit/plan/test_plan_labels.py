@@ -15,7 +15,7 @@ from finn.plan.labels import (
 from finn.plan.workbook import units_in_text
 
 
-def test_normalise() -> None:
+def test_normalise_drops_case_umlauts_enumerations_and_parentheses() -> None:
     assert normalise("B. Sonderposten für Investitions- und Baukostenzuschüsse") == (
         "sonderposten fuer investitions und baukostenzuschuesse"
     )

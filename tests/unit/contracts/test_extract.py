@@ -14,15 +14,12 @@ from finn.contracts.draft import ProfileDraft, ReviewIssue, ReviewResult, from_p
 from finn.contracts.store import load_profiles
 from finn.llm import client
 from finn.models.contract import ContractProfile
+from mailkit import profile_by_id
 
 ROOT = Path(__file__).resolve().parents[3]
 MATERIAL = ROOT / "material"
 GOLD = ROOT / "tests" / "fixtures" / "profiles_gold"
 V4_PDF = MATERIAL / "Vertrag_4_Konsortialkredit.pdf"
-
-
-def by_id(profiles: list[ContractProfile], cid: str) -> ContractProfile:
-    return next(p for p in profiles if p.contract_id == cid)
 
 
 class FakeLLM:
@@ -60,7 +57,7 @@ def comparable(profile: ContractProfile) -> dict[str, Any]:
 
 @pytest.fixture
 def v4_gold(gold_profiles: list[ContractProfile]) -> ContractProfile:
-    return by_id(gold_profiles, "V4")
+    return profile_by_id(gold_profiles, "V4")
 
 
 def test_extract_fills_metadata_and_draft_status(v4_gold: ContractProfile, tmp_path: Path) -> None:
@@ -154,11 +151,6 @@ def test_contract_ids() -> None:
 
 
 # ── CLI ──────────────────────────────────────────────────────────────────────
-
-
-@pytest.fixture
-def at_root(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.chdir(ROOT)
 
 
 @pytest.mark.usefixtures("at_root")

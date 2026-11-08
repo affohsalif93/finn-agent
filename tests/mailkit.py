@@ -19,6 +19,7 @@ from finn.config import Settings
 from finn.llm import client
 from finn.mail.connector import MailConnectionError
 from finn.mail.parse import inbound_from_bytes
+from finn.models.contract import ContractProfile
 from finn.models.mail import InboundMessage, ReplyDraft
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -26,6 +27,11 @@ MATERIAL = ROOT / "material"
 SAMPLE = MATERIAL / "Wirtschaftsplan_2027.xlsx"
 GOLD_PROFILES = ROOT / "tests" / "fixtures" / "profiles_gold"
 TIGHT_RATIO = Settings.model_fields["tight_headroom_ratio"].default
+
+
+def profile_by_id(profiles: list[ContractProfile], cid: str) -> ContractProfile:
+    return next(p for p in profiles if p.contract_id == cid)
+
 
 FINN = "finn.box+finn@example.com"
 ACCOUNT = "finn.box@example.com"

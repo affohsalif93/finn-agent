@@ -21,7 +21,6 @@ from temporalio.testing import WorkflowEnvironment
 from temporalio.worker import Worker
 
 from finn.config import Settings
-from finn.llm import client as llm_client
 from finn.mail.connector import FolderMissingError
 from finn.mail.parse import inbound_from_bytes
 from finn.models.run import RunOutcome, StartRun
@@ -34,19 +33,13 @@ from mailkit import (
     FakeConnector,
     build_mail,
     fixture_mails,
-    llm_unavailable,
     plan_attachment,
     settings,
 )
 
-pytestmark = pytest.mark.asyncio(loop_scope="session")
+pytestmark = [pytest.mark.asyncio(loop_scope="session"), pytest.mark.usefixtures("no_llm")]
 
 REQUEST_ID = "req-0001@stadtwerke-musterstadt.de"
-
-
-@pytest.fixture(autouse=True)
-def _no_llm(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(llm_client, "complete_structured", llm_unavailable)
 
 
 @asynccontextmanager

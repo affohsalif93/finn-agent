@@ -130,7 +130,9 @@ async def live_results(
 
 
 @pytest.mark.parametrize("name", [c.name for c in CASES])
-async def test_case(name: str, live_results: dict[str, CaseResult]) -> None:
+async def test_mail_case_gets_expected_replies(
+    name: str, live_results: dict[str, CaseResult]
+) -> None:
     if name not in live_results:
         pytest.skip("not selected (--case)")
     result = live_results[name]

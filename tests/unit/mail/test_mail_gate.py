@@ -104,7 +104,7 @@ def test_unknown_sender_with_allowlist(tmp_path: Path) -> None:
     assert decision.event == "access_rejected"
 
 
-def test_dmarc(tmp_path: Path) -> None:
+def test_dmarc_failure_rejected_only_when_required(tmp_path: Path) -> None:
     fail = build_mail(
         headers={"Authentication-Results": "mx.google.com; spf=fail; dkim=none; dmarc=fail"}
     )

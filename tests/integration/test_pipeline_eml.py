@@ -8,7 +8,6 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from finn.llm import client
 from finn.mail.connector import build_mime
 from finn.pipeline import process_eml
 from mailkit import (
@@ -16,15 +15,11 @@ from mailkit import (
     FakeConnector,
     build_mail,
     fixture_mails,
-    llm_unavailable,
     settings,
     write_fixtures,
 )
 
-
-@pytest.fixture(autouse=True)
-def _no_llm(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(client, "complete_structured", llm_unavailable)
+pytestmark = pytest.mark.usefixtures("no_llm")
 
 
 @pytest.fixture

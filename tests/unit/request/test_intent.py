@@ -12,7 +12,9 @@ from finn.models.mail import ParsedMessage
 from finn.models.run import ClassifyInput, ParseInput
 from finn.pipeline import classify_intent, parse_message
 from finn.request.intent import ContractInfo, IntentAnswer, check_input, rule_fallback
-from mailkit import FINN, build_mail, fixture_mails, llm_returning, llm_unavailable, settings
+from mailkit import FINN, build_mail, fixture_mails, llm_returning, settings
+
+pytestmark = pytest.mark.usefixtures("no_llm")
 
 CONTRACTS = [
     ContractInfo("V1", "Sparkasse", False),
@@ -39,11 +41,6 @@ def _classify(thread: list[ParsedMessage], tmp_path: Path):  # type: ignore[no-u
         ClassifyInput(thread=thread, run_dir=run, workflow_id="wf", session_id="s"),
         settings(tmp_path),
     )
-
-
-@pytest.fixture(autouse=True)
-def _no_llm(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(client, "complete_structured", llm_unavailable)
 
 
 def test_fallback_xlsx_and_keywords(tmp_path: Path) -> None:

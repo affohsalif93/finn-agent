@@ -50,7 +50,7 @@ def test_only_expected_blocks(plan: Plan) -> None:
     assert set(plan.values) == set(EXPECTED)
 
 
-def test_cover(plan: Plan) -> None:
+def test_cover_sheet_company_year_and_status(plan: Plan) -> None:
     assert plan.company == "Stadtwerke Musterstadt GmbH"
     assert plan.plan_year == 2027
     assert plan.reporting_date == date(2027, 12, 31)
@@ -59,7 +59,7 @@ def test_cover(plan: Plan) -> None:
     assert len(plan.file_sha256) == 64
 
 
-def test_loans(plan: Plan) -> None:
+def test_loan_schedule_numbers_kinds_and_repayments(plan: Plan) -> None:
     numbers = [(ln.loan_number, ln.kind) for ln in plan.loans]
     assert numbers == [
         ("4471 203 118", "bank"),
@@ -86,7 +86,7 @@ def test_aggregates_list_every_cell(plan: Plan) -> None:
     assert [str(r) for r in bank.derived_from] == [f"Finanzierung!F{r}" for r in range(5, 10)]
 
 
-def test_facts(plan: Plan) -> None:
+def test_plan_facts_from_balance_sheet_notes(plan: Plan) -> None:
     sub = plan.facts[FactKey.QUALIFIED_SUBORDINATION]
     assert (sub.value, sub.ambiguous, str(sub.evidence)) == (True, False, "Bilanz!A39")
     assert sub.quote is not None

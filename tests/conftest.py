@@ -10,8 +10,10 @@ import pytest_asyncio
 from temporalio.testing import WorkflowEnvironment
 
 from finn.contracts.store import load_profiles
+from finn.llm import client
 from finn.models.contract import ContractProfile
 from finn.plan import PlanReadResult, read_plan
+from mailkit import llm_unavailable
 
 ROOT = Path(__file__).resolve().parents[1]
 MATERIAL = ROOT / "material"
@@ -52,6 +54,18 @@ def plan_fixtures(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Path]:
 @pytest.fixture(scope="session")
 def sample_result() -> PlanReadResult:
     return read_plan(SAMPLE)
+
+
+@pytest.fixture
+def no_llm(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Every LLM call fails as if OpenAI were down: the code paths without the LLM."""
+    monkeypatch.setattr(client, "complete_structured", llm_unavailable)
+
+
+@pytest.fixture
+def at_root(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Run from the repo root: default CONTRACTS_DIR / PROFILES_DIR are relative to it."""
+    monkeypatch.chdir(ROOT)
 
 
 @pytest.fixture(scope="session")

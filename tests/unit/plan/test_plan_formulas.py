@@ -51,7 +51,7 @@ def ev(tmp_path: Path) -> Evaluator:
         ("B12", Decimal("27.5")),  # nested formulas
     ],
 )
-def test_recomputed(ev: Evaluator, cell: str, value: Decimal) -> None:
+def test_simple_formulas_are_recomputed(ev: Evaluator, cell: str, value: Decimal) -> None:
     result = ev.read("S", cell)
     assert (result.value, result.recomputed) == (value, True)
 
@@ -66,7 +66,7 @@ def test_errors_propagate(ev: Evaluator, cell: str, error: str) -> None:
 
 
 @pytest.mark.parametrize("cell", ["B6", "B8", "B11", "B13"])
-def test_unsupported(ev: Evaluator, cell: str) -> None:
+def test_unsupported_formulas_give_no_value(ev: Evaluator, cell: str) -> None:
     result = ev.read("S", cell)
     assert result.unsupported
     assert result.value is None

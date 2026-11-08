@@ -49,7 +49,7 @@ def test_plan_year_mismatch(plan: Plan) -> None:
     assert f.message_de == "Angefragt: 2026, die Datei enthält Plan 2027."
 
 
-def test_scale(plan: Plan) -> None:
+def test_bank_debt_off_by_factor_1000_warns(plan: Plan) -> None:
     amounts = [Decimal(20_000_000), Decimal(30_000_000), Decimal(37_000_000), Decimal(64_000_000)]
     assert checks.check_scale(plan, amounts) == []
     (f,) = checks.check_scale(_with(plan, ItemKey.BANK_DEBT, 148), amounts)

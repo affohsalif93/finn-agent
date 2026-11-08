@@ -24,7 +24,7 @@ def _texts(*texts: str) -> list[TextCell]:
         ("Darlehen der Stadt", False, True),  # nothing said, shareholder loan exists
     ],
 )
-def test_subordination(text: str, value: bool, ambiguous: bool) -> None:
+def test_subordination_from_note(text: str, value: bool, ambiguous: bool) -> None:
     fact, findings = subordination_fact(_texts(text), has_shareholder_loan=True)
     assert (fact.value, fact.ambiguous) == (value, ambiguous)
     assert [f.code for f in findings] == ([ErrorCode.PLAN_FACT_AMBIGUOUS] if ambiguous else [])
@@ -52,7 +52,7 @@ def test_no_shareholder_loan_no_warning() -> None:
         ("Kreditlinie frei verfügbar", False, True),  # not about cash: no evidence
     ],
 )
-def test_cash(text: str, value: bool, ambiguous: bool) -> None:
+def test_cash_availability_from_note(text: str, value: bool, ambiguous: bool) -> None:
     fact, _ = cash_fact(_texts(text), has_cash=True)
     assert (fact.value, fact.ambiguous) == (value, ambiguous)
 

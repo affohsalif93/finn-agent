@@ -29,8 +29,9 @@ from mailkit import (
     TIGHT_RATIO,
     fixture_mails,
     llm_returning,
-    llm_unavailable,
 )
+
+pytestmark = pytest.mark.usefixtures("no_llm")
 
 GOLDEN = Path(__file__).resolve().parents[2] / "fixtures" / "replies" / "result_sample.txt"
 RUN_ID = "20261102T081500Z_7d364a2056c1"
@@ -53,11 +54,6 @@ def report() -> Report:
 @pytest.fixture
 def inbound():  # type: ignore[no-untyped-def]
     return inbound_from_bytes(fixture_mails()["request"], mailbox=FINN, keep_raw=False)
-
-
-@pytest.fixture(autouse=True)
-def _no_llm(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(client, "complete_structured", llm_unavailable)
 
 
 def _result(report: Report, inbound) -> tuple[render.Context, Any]:  # type: ignore[no-untyped-def]
