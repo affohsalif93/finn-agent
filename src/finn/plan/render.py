@@ -1,17 +1,8 @@
 """Plain-text view of a `PlanReadResult` for `finn plan read` (no extra dependencies)."""
 
+from finn.models.run import PlanReadResult
 from finn.numbers import format_de
-from finn.plan.reader import PlanReadResult
-
-
-def text_table(headers: list[str], rows: list[list[str]], max_width: int = 60) -> list[str]:
-    cells = [[c if len(c) <= max_width else c[: max_width - 1] + "…" for c in r] for r in rows]
-    widths = [max(len(h), *(len(r[i]) for r in cells)) for i, h in enumerate(headers)]
-    line = "  ".join(h.ljust(w) for h, w in zip(headers, widths, strict=True))
-    out = [line.rstrip(), "  ".join("-" * w for w in widths)]
-    for r in cells:
-        out.append("  ".join(c.ljust(w) for c, w in zip(r, widths, strict=True)).rstrip())
-    return out
+from finn.text import text_table
 
 
 def render_text(result: PlanReadResult) -> str:

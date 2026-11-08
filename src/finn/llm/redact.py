@@ -2,13 +2,14 @@
 
 - `clean_body`: strip quoted history, signatures and mobile footers from a mail body.
 - `Pseudonyms`: replace emails, phone numbers, IBANs and given person names with placeholders
-  (`[EMAIL_1]`, `[PHONE_1]`, `[IBAN_1]`, `[PERSON_1]`) and restore them afterwards. The same
+  (`[EMAIL_1]`, `[PHONE_1]`, `[IBAN_1]`, `[PERSON_1]`). The same
   original always gets the same placeholder; the mapping stays local (run folder
   `pseudonyms.json`), never in a prompt.
+- `Masker`: numbers and names in reply text → `{{N1}}` / `{{NAME1}}` for the polish call.
 """
 
 import re
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 
 _EMAIL = re.compile(r"[\w.!#$%&'*+/=?^`{|}~-]+@[\w-]+(?:\.[\w-]+)+", re.UNICODE)
 # IBAN: country code, check digits, 11–30 alphanumerics, optionally grouped by 4 with spaces.
@@ -129,3 +130,38 @@ def _name_variants(names: Iterable[str]) -> list[str]:
             if len(v) >= 3 and v not in variants:
                 variants.append(v)
     return sorted(variants, key=len, reverse=True)
+
+
+# ── reply polish: numbers and names → placeholders ──────────────────────────
+
+_MASK_NUMBER = re.compile(r"(?<![\w{])[-−]?\d[\d.,]*\d(?![\w}])|(?<![\w{])\d(?![\w}])")
+_MASK_PLACEHOLDER = re.compile(r"\{\{[A-Z]+\d+\}\}")
+
+
+class Masker:
+    """Numbers and names → `{{N1}}` / `{{NAME1}}`; `fill` puts them back."""
+
+    def __init__(self, names: Sequence[str]) -> None:
+        self.mapping: dict[str, str] = {}
+        self.names = sorted({n for n in names if n and len(n) >= 3}, key=len, reverse=True)
+
+    def _ph(self, prefix: str, value: str) -> str:
+        for k, v in self.mapping.items():
+            if v == value and k.startswith("{{" + prefix):
+                return k
+        key = f"{{{{{prefix}{1 + sum(1 for k in self.mapping if k.startswith('{{' + prefix))}}}}}"
+        self.mapping[key] = value
+        return key
+
+    def mask(self, text: str) -> str:
+        for name in self.names:
+            text = text.replace(name, self._ph("NAME", name))
+        return _MASK_NUMBER.sub(lambda m: self._ph("N", m.group(0)), text)
+
+    def fill(self, text: str) -> str:
+        return _MASK_PLACEHOLDER.sub(lambda m: self.mapping.get(m.group(0), m.group(0)), text)
+
+
+def placeholders(text: str) -> set[str]:
+    """The `{{…}}` placeholders in a masked text."""
+    return set(_MASK_PLACEHOLDER.findall(text))

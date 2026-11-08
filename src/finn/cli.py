@@ -9,6 +9,7 @@ from typing import Annotated
 import typer
 
 from finn.config import get_settings
+from finn.errors import ErrorCode
 from finn.log import configure_logging
 
 app = typer.Typer(help="Finn: covenant check agent.", no_args_is_help=True)
@@ -94,7 +95,7 @@ def check(
 ) -> None:
     """Covenant check: read the plan, load the profiles, calculate, print the result."""
     from finn.calc.engine import calculate
-    from finn.calc.render import render_report
+    from finn.calc.report_text import render_report
     from finn.contracts.store import load_profiles
     from finn.plan import read_plan
 
@@ -188,12 +189,12 @@ def demo_send_cases(
 
 
 _PROFILE_ERRORS = {
-    "PROFILE_MISSING",
-    "PROFILE_INVALID_RECIPE",
-    "PROFILE_INVARIANT",
-    "PROFILE_EXAMPLE_MISMATCH",
-    "PROFILE_QUOTE_MISMATCH",
-    "CONTRACT_CHANGED",
+    ErrorCode.PROFILE_MISSING,
+    ErrorCode.PROFILE_INVALID_RECIPE,
+    ErrorCode.PROFILE_INVARIANT,
+    ErrorCode.PROFILE_EXAMPLE_MISMATCH,
+    ErrorCode.PROFILE_QUOTE_MISMATCH,
+    ErrorCode.CONTRACT_CHANGED,
 }
 
 

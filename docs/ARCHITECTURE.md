@@ -635,7 +635,7 @@ Alle Kennzahlen wurden deterministisch berechnet, nicht vom Sprachmodell.
 Finn · Referenz: <run-id>
 ```
 
-**As built (Nov 2026), in the style of `material/Demo_Finn_Covenant-Pruefung.html`:** greeting + "die Covenant-Prüfung … ist abgeschlossen" · lead box (overall, tightest covenant with headroom, sensitivity, early-warning note; an ambiguous plan fact that flips a result is named here) · compact table with a coloured status dot and footnote marks · footnotes (definition + covenant clause per covenant, plan file, company, reporting date) · Hinweise (≤ 6 bullets: input notes, then one bullet per contract with its notes) · "Rechenweg und Quellen" links · one path per covenant in four steps (Quelle im Vertrag, Formel in words, Eingangswerte with short labels / T€ / cell and sub-totals, Ergebnis with the contract's rounding wording) plus "Besonderheit" (excluded components with reason, plan note and a trimmed verbatim contract quote; items set to 0; the alternative value only if it changes met / tight) · shared "EBITDA (Herleitung)" block · signature with the deterministic-core sentence and the reference. Code: `reply/render.py` (contexts), `reply/paths.py` (calculation path), templates `mail.{html,txt}.j2`. ASK / BLOCK / OTHER / ERROR use the same frame: one-line lead box (amber / red / grey), bullet list of what is wrong (file, cell), "So geht es weiter".
+**As built (Nov 2026), in the style of `material/Demo_Finn_Covenant-Pruefung.html`:** greeting + "die Covenant-Prüfung … ist abgeschlossen" · lead box (overall, tightest covenant with headroom, sensitivity, early-warning note; an ambiguous plan fact that flips a result is named here) · compact table with a coloured status dot and footnote marks · footnotes (definition + covenant clause per covenant, plan file, company, reporting date) · Hinweise (≤ 6 bullets: input notes, then one bullet per contract with its notes) · "Rechenweg und Quellen" links · one path per covenant in four steps (Quelle im Vertrag, Formel in words, Eingangswerte with short labels / T€ / cell and sub-totals, Ergebnis with the contract's rounding wording) plus "Besonderheit" (excluded components with reason, plan note and a trimmed verbatim contract quote; items set to 0; the alternative value only if it changes met / tight) · shared "EBITDA (Herleitung)" block · signature with the deterministic-core sentence and the reference. Code: `reply/render.py` (contexts), `reply/calc_path.py` (calculation path), `reply/text_layout.py` (text part), `reply/polish.py` (LLM polish), templates `mail.{html,txt}.j2`. ASK / BLOCK / OTHER / ERROR use the same frame: one-line lead box (amber / red / grey), bullet list of what is wrong (file, cell), "So geht es weiter".
 
 **Variants and format decisions:**
 
@@ -781,6 +781,8 @@ src/finn/
 ├── log.py                 structlog setup (console for the demo, JSON to files)
 ├── errors.py              ErrorCode enum (FAILURES.md), Severity, Finding, German message templates
 ├── numbers.py             German number parse/format ("148.200", "34,32 %"), Decimal(str(x))
+├── wording.py             German wording of covenant results (value, limit, headroom, status)
+├── text.py                plain-text table (CLI, text part of the mail)
 │
 ├── models/                data contracts (§2.3), no logic
 │   ├── mail.py            InboundMessage, ParsedMessage, Attachment, Request, ReplyDraft, SentRecord
@@ -804,10 +806,12 @@ src/finn/
 │   ├── recipe.py          structural validation of recipes, dependencies
 │   ├── evaluator.py       evaluate(recipe, blocks, facts)
 │   ├── rounding.py        contract rounding, headroom, tight flag
-│   ├── sensitivity.py     rounding-aware break points
+│   ├── sensitivity.py     rounding-aware break points, EBITDA / equity sensitivity
 │   ├── formula.py         formula_de from the component trace
-│   ├── render.py          text output for `finn check`
-│   └── engine.py          all profiles × plan → Report (+ loan checks, notes)
+│   ├── notes.py           contract notes (pricing grid, plan-check duty, cure, breach)
+│   ├── loan_checks.py     contract ↔ plan checks (company, scale, loans, repayments)
+│   ├── report_text.py     text output for `finn check`
+│   └── engine.py          all profiles × plan → Report
 ├── contracts/             onboarding + loading
 │   ├── pdf_text.py        page texts with page numbers (cached by hash in data/.cache/), masking
 │   ├── draft.py           LLM draft schema (strict-schema friendly) → ContractProfile; review schema
@@ -830,11 +834,15 @@ src/finn/
 ├── llm/
 │   ├── client.py          OpenAI client, structured outputs, timeouts, usage log
 │   ├── fake.py            TEST ONLY: deterministic stand-in (FINN_LLM_FAKE), live mail tests / demo
-│   └── redact.py          pseudonymise / restore (D21)
+│   └── redact.py          pseudonymise (D21)
 ├── request/
-│   └── intent.py          classify_intent (LLM) + rule fallback + input contracts
+│   ├── intent.py          classify_intent (LLM) + rule fallback + input contracts
+│   └── prompts/           intent.md
 ├── reply/
-│   ├── render.py          Report → template → (LLM polish) → ReplyDraft
+│   ├── render.py          Report → template context → ReplyDraft
+│   ├── calc_path.py       calculation path per covenant (source, formula, inputs, result)
+│   ├── text_layout.py     plain-text layout (result table, calculation paths)
+│   ├── polish.py          optional LLM polish with placeholders (D21); prompts/polish.md
 │   ├── number_check.py    every number in the text ∈ Report
 │   └── templates/         mail.html.j2, mail.txt.j2 (one pair; the context fills only the
 │                          sections a variant needs: result, ask, block, other, error)

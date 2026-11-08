@@ -4,7 +4,7 @@ from collections.abc import Sequence
 
 from finn.models.result import AssumedZero, CovenantResult, Excluded, Report, Trace, Used
 from finn.numbers import number_de
-from finn.plan.render import text_table
+from finn.text import text_table
 from finn.wording import headroom_de, met_de, minus, plan_status_de, threshold_de, value_de
 
 

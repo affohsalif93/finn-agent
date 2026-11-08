@@ -23,10 +23,10 @@ from finn.models.run import (
     FailureInput,
     ParseInput,
     PlanInput,
+    PlanReadResult,
     RenderInput,
     SendInput,
 )
-from finn.plan.reader import PlanReadResult
 
 NON_RETRYABLE = ["InputError", "MailAuthError"]
 

@@ -12,7 +12,6 @@ Pure functions on `CovenantResult`; every number shown comes from the report (or
 """
 
 import re
-import textwrap
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from decimal import ROUND_DOWN, Decimal
@@ -21,8 +20,7 @@ from finn.calc.rounding import effective_decimals, headroom, is_met, is_tight, r
 from finn.errors import ErrorCode
 from finn.models.contract import Source
 from finn.models.plan import CellRef, FactKey
-from finn.models.result import AssumedZero, CovenantResult, Excluded, Trace
-from finn.models.result import Used as UsedTrace
+from finn.models.result import AssumedZero, CovenantResult, Excluded, Trace, Used
 from finn.numbers import number_de, unit_suffix
 from finn.wording import (
     STATUS_DE,
@@ -76,8 +74,6 @@ _EXCLUSION_WORDS = re.compile(
 )
 _NOT_INCLUDED = re.compile(r",?\s*nicht (?:einzubeziehen|enthalten)\s*$")  # said by the sentence
 _QUOTE_WORDS = 14  # a trimmed quote keeps about this many words
-LABEL_WIDTH = 20  # text part: label column of the calculation path
-TEXT_WIDTH = 100
 
 
 def mark(n: int) -> str:
@@ -203,10 +199,10 @@ def plan_sheets(results: Sequence[CovenantResult]) -> list[str]:
 
     def walk(traces: Sequence[Trace]) -> None:
         for t in traces:
-            for ref in t.refs if isinstance(t, (UsedTrace, Excluded)) else []:
+            for ref in t.refs if isinstance(t, (Used, Excluded)) else []:
                 if ref.sheet not in seen:
                     seen.append(ref.sheet)
-            if isinstance(t, UsedTrace):
+            if isinstance(t, Used):
                 walk(t.parts)
 
     for r in results:
@@ -220,19 +216,19 @@ def plan_sheets(results: Sequence[CovenantResult]) -> list[str]:
 # ── formula in words ─────────────────────────────────────────────────────────
 
 
-def _short(t: UsedTrace | Excluded | AssumedZero) -> str:
+def _short(t: Used | Excluded | AssumedZero) -> str:
     return SHORT_LABELS.get(t.component, t.label_de)
 
 
 def _side_words(traces: Sequence[Trace]) -> str:
-    used = [t for t in traces if isinstance(t, UsedTrace)]
+    used = [t for t in traces if isinstance(t, Used)]
     if (
         len(used) == 1
         and used[0].component.startswith("ref:")
         and used[0].component != EBITDA_REF
-        and 2 <= len([p for p in used[0].parts if isinstance(p, UsedTrace)]) <= 3
+        and 2 <= len([p for p in used[0].parts if isinstance(p, Used)]) <= 3
     ):
-        used = [p for p in used[0].parts if isinstance(p, UsedTrace)]
+        used = [p for p in used[0].parts if isinstance(p, Used)]
     words = [_prefix(t.weight, i == 0) + strip_parenthetical(_short(t)) for i, t in enumerate(used)]
     text = " ".join(words)
     return f"({text})" if len(used) > 1 else text
@@ -267,8 +263,8 @@ def _cells(refs: Sequence[CellRef]) -> str:
     return f"{len(refs)} Zellen"
 
 
-def _is_loan_aggregate(t: UsedTrace) -> bool:
-    used = [p for p in t.parts if isinstance(p, UsedTrace)]
+def _is_loan_aggregate(t: Used) -> bool:
+    used = [p for p in t.parts if isinstance(p, Used)]
     return bool(used) and all(p.component.startswith("loan:") for p in used)
 
 
@@ -281,14 +277,14 @@ def _prefix(w: Decimal, first: bool) -> str:
     return f"{sign}{number_de(abs(w))} × "
 
 
-def _rows(t: UsedTrace, w: Decimal, first: bool) -> list[InputRow]:
+def _rows(t: Used, w: Decimal, first: bool) -> list[InputRow]:
     """A leaf (plan item, loan aggregate, EBITDA) is one row; a definition with several parts
     expands into its parts plus a sub-total row."""
     weight = w * t.weight
     if t.component == EBITDA_REF:
         return [InputRow(f"{_prefix(weight, first)}EBITDA", number_de(t.value),
                          "GuV (Herleitung unten)")]  # fmt: skip
-    used = [p for p in t.parts if isinstance(p, UsedTrace)]
+    used = [p for p in t.parts if isinstance(p, Used)]
     if t.component.startswith("ref:") and used and not _is_loan_aggregate(t):
         if len(used) == 1 and used[0].value == t.value:
             return _rows(used[0], weight, first)
@@ -308,7 +304,7 @@ def input_rows(r: CovenantResult) -> list[InputRow]:
         return []
     rows: list[InputRow] = []
     for side in (r.components.numerator, r.components.denominator):
-        used = [t for t in side if isinstance(t, UsedTrace)]
+        used = [t for t in side if isinstance(t, Used)]
         for i, t in enumerate(used):
             rows += _rows(t, Decimal(1), i == 0)
         if len(used) > 1 and r.components.denominator:
@@ -352,9 +348,9 @@ def head_line(r: CovenantResult) -> str:
     op = "≤" if r.operator == "<=" else "≥"
     limit = limit_de(r)
     room = minus(headroom_de(r))
-    knapp = " (knapp)" if r.status == "met" and r.tight else ""
+    tight = " (knapp)" if r.status == "met" and r.tight else ""
     word = " · nicht eingehalten" if r.status == "breached" else ""
-    return f"{value_de(r)} {op} {limit} · Spielraum {room}{knapp}{word}"
+    return f"{value_de(r)} {op} {limit} · Spielraum {room}{tight}{word}"
 
 
 # ── "Besonderheit" ───────────────────────────────────────────────────────────
@@ -442,7 +438,7 @@ def _walk_specials(
     tight_ratio: Decimal,
 ) -> None:
     for t in traces:
-        if isinstance(t, UsedTrace):
+        if isinstance(t, Used):
             if t.component != EBITDA_REF:  # EBITDA: shared derivation block
                 _walk_specials(r, t.parts, w * t.weight, in_numerator, specials, zeros, tight_ratio)
         elif isinstance(t, AssumedZero):
@@ -522,9 +518,9 @@ def path_block(r: CovenantResult, status: str, tight_ratio: Decimal) -> PathBloc
 # ── EBITDA (shared derivation) ───────────────────────────────────────────────
 
 
-def _find_ebitda(traces: Sequence[Trace]) -> UsedTrace | None:
+def _find_ebitda(traces: Sequence[Trace]) -> Used | None:
     for t in traces:
-        if isinstance(t, UsedTrace):
+        if isinstance(t, Used):
             if t.component == EBITDA_REF:
                 return t
             found = _find_ebitda(t.parts)
@@ -534,7 +530,7 @@ def _find_ebitda(traces: Sequence[Trace]) -> UsedTrace | None:
 
 
 def ebitda_blocks(results: Sequence[CovenantResult]) -> list[EbitdaBlock]:
-    groups: dict[tuple[tuple[str, str], ...], tuple[UsedTrace, list[str]]] = {}
+    groups: dict[tuple[tuple[str, str], ...], tuple[Used, list[str]]] = {}
     for r in results:
         if r.components is None:
             continue
@@ -549,7 +545,7 @@ def ebitda_blocks(results: Sequence[CovenantResult]) -> list[EbitdaBlock]:
     blocks: list[EbitdaBlock] = []
     for n, (e, users) in enumerate(groups.values()):
         rows: list[InputRow] = []
-        used = [p for p in e.parts if isinstance(p, UsedTrace)]
+        used = [p for p in e.parts if isinstance(p, Used)]
         for i, p in enumerate(used):
             rows += _rows(p, Decimal(1), i == 0)
         rows.append(InputRow("= EBITDA", number_de(e.value), "", subtotal=True))
@@ -571,59 +567,3 @@ def ebitda_blocks(results: Sequence[CovenantResult]) -> list[EbitdaBlock]:
             )
         )
     return blocks
-
-
-# ── plain-text layout ────────────────────────────────────────────────────────
-
-
-def _labelled(label: str, text: str) -> list[str]:
-    indent = " " * LABEL_WIDTH
-    wrapped = textwrap.wrap(text, TEXT_WIDTH - LABEL_WIDTH) or [""]
-    return [f"{label:<{LABEL_WIDTH}}{wrapped[0]}", *(indent + w for w in wrapped[1:])]
-
-
-def _input_lines(rows: Sequence[InputRow]) -> list[str]:
-    if not rows:
-        return []
-    w_label = max(len("Position"), *(len(r.label) for r in rows)) + 2
-    w_value = max(len("T€"), *(len(r.value) for r in rows))
-    lines = [f"{'Position':<{w_label}}{'T€':>{w_value}}   Zelle"]
-    lines += [f"{r.label:<{w_label}}{r.value:>{w_value}}   {r.cell}".rstrip() for r in rows]
-    return lines
-
-
-def text_block(title: str, head: str, rows: list[tuple[str, str | list[InputRow]]]) -> str:
-    gap = max(2, TEXT_WIDTH - len(title) - len(head))
-    out = [f"{title}{' ' * gap}{head}" if head else title]
-    for label, content in rows:
-        if isinstance(content, list):
-            lines = _input_lines(content)
-            for i, line in enumerate(lines):
-                out.append(f"{label if i == 0 else '':<{LABEL_WIDTH}}{line}")
-        else:
-            out += _labelled(label, content)
-    return "\n".join(out)
-
-
-def path_text(b: PathBlock) -> str:
-    rows: list[tuple[str, str | list[InputRow]]] = []
-    if b.source:
-        rows.append(("Quelle im Vertrag", b.source))
-    if b.formula:
-        rows.append(("Formel", b.formula))
-    if b.inputs:
-        rows.append(("Eingangswerte", b.inputs))
-    rows.append(("Ergebnis", b.result))
-    for i, s in enumerate(b.specials):
-        rows.append(("Besonderheit" if i == 0 else "", s))
-    return text_block(b.title, b.head, rows)
-
-
-def ebitda_text(b: EbitdaBlock) -> str:
-    rows: list[tuple[str, str | list[InputRow]]] = [
-        ("Verwendet in", b.used_by),
-        ("Eingangswerte", b.inputs),
-    ]
-    for i, s in enumerate(b.specials):
-        rows.append(("Besonderheit" if i == 0 else "", s))
-    return text_block(b.title, "", rows)

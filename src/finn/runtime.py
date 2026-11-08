@@ -14,7 +14,7 @@ from finn.config import Settings
 
 log = structlog.get_logger(__name__)
 
-MAX_BACKOFF_SECONDS = 30.0
+CONNECT_MAX_BACKOFF_SECONDS = 30.0
 
 
 def install_stop_handlers() -> asyncio.Event:
@@ -50,7 +50,7 @@ async def connect(settings: Settings, stop: asyncio.Event | None = None) -> Clie
             )
             with contextlib.suppress(TimeoutError):  # sleep `delay`, but wake early on stop
                 await asyncio.wait_for(stop.wait(), timeout=delay)
-            delay = min(delay * 2, MAX_BACKOFF_SECONDS)
+            delay = min(delay * 2, CONNECT_MAX_BACKOFF_SECONDS)
         else:
             log.info("connected to temporal", address=settings.temporal_address)
             return client

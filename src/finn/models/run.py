@@ -17,12 +17,22 @@ from finn.models.mail import (
     Request,
     SentRecord,
 )
+from finn.models.plan import Plan
 from finn.models.result import CheckedInput, Report
-from finn.plan.reader import PlanReadResult
 
 
 class _Model(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
+
+
+class PlanReadResult(BaseModel):
+    """What the plan reader returns: the plan (None if unreadable) and its findings."""
+
+    model_config = ConfigDict(frozen=True)
+
+    plan: Plan | None
+    findings: list[Finding]
+    mapping_log: list[str]
 
 
 class StartRun(_Model):

@@ -41,7 +41,7 @@ from finn.workflows.covenant_check import CovenantCheckWorkflow
 
 log = structlog.get_logger(__name__)
 
-MAX_BACKOFF_SECONDS = 300.0
+POLL_MAX_BACKOFF_SECONDS = 300.0
 AUTH_PAUSE_SECONDS = 900.0
 Outcome = Literal["started", "signalled", "duplicate", "rejected"]
 
@@ -116,7 +116,7 @@ async def run_poller(settings: Settings) -> None:
 
 
 def _backoff(settings: Settings, failures: int) -> float:
-    return float(min(settings.poll_interval_seconds * 2**failures, MAX_BACKOFF_SECONDS))
+    return float(min(settings.poll_interval_seconds * 2**failures, POLL_MAX_BACKOFF_SECONDS))
 
 
 async def poll_once(

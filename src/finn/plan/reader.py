@@ -12,10 +12,10 @@ from pathlib import Path
 
 from openpyxl.utils.cell import get_column_letter
 from openpyxl.worksheet.worksheet import Worksheet
-from pydantic import BaseModel, ConfigDict
 
 from finn.errors import ErrorCode, Finding, finding
 from finn.models.plan import CellRef, FactKey, ItemKey, Plan, PlanFact, PlanValue
+from finn.models.run import PlanReadResult
 from finn.plan import checks
 from finn.plan.facts import TextCell, cash_fact, loan_facts, subordination_fact
 from finn.plan.formulas import CellErrorValue, CellValue, Evaluator, UnsupportedFormula
@@ -39,14 +39,6 @@ from finn.plan.workbook import (
     open_workbook,
     units_in_text,
 )
-
-
-class PlanReadResult(BaseModel):
-    model_config = ConfigDict(frozen=True)
-
-    plan: Plan | None
-    findings: list[Finding]
-    mapping_log: list[str]
 
 
 @dataclass

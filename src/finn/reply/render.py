@@ -16,23 +16,32 @@ question), error: greeting, one-line lead box, what exactly is wrong, "So geht e
 
 import hashlib
 import re
-from collections.abc import Callable, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from decimal import Decimal
 from pathlib import Path
 from typing import Any, Literal
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined, select_autoescape
-from pydantic import BaseModel, ConfigDict
 
-from finn.errors import ErrorCode, Finding, Severity, finding, stopping
-from finn.llm import client
+from finn.errors import ErrorCode, Finding, Severity, stopping
 from finn.mail.thread import reply_references, reply_subject
 from finn.models.mail import InboundMessage, ReplyDraft, ReplyKind
 from finn.models.result import CheckedInput, ContractNote, CovenantResult, Report
+from finn.models.run import RenderInput
 from finn.numbers import number_de, unit_suffix
-from finn.reply import paths as rw
-from finn.reply.number_check import allowed_values, unknown_numbers
+from finn.reply.calc_path import (
+    EbitdaBlock,
+    PathBlock,
+    anchor,
+    ebitda_blocks,
+    footnote,
+    mark,
+    path_block,
+    plan_sheets,
+    strip_label,
+)
+from finn.reply.text_layout import ebitda_text, path_text, result_table
 from finn.wording import (
     alt_status_de,
     headroom_de,
@@ -113,8 +122,8 @@ class Context:
     footnotes: list[str] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)  # Hinweise (polished by the LLM)
     links: list[Link] = field(default_factory=list)
-    paths: list[rw.PathBlock] = field(default_factory=list)
-    ebitda: list[rw.EbitdaBlock] = field(default_factory=list)
+    paths: list[PathBlock] = field(default_factory=list)
+    ebitda: list[EbitdaBlock] = field(default_factory=list)
     signature: list[str] = field(default_factory=list)
     footer: list[str] = field(default_factory=list)
     run_id: str = ""
@@ -251,7 +260,7 @@ def _hints(report: Report, general: Sequence[Finding]) -> list[str]:
         for f in r.findings:
             if f.code == ErrorCode.PLAN_STATUS_REQUIRED:
                 name, texts = by_contract.setdefault(r.contract_id, (r.contract_name_de, []))
-                text = _strip_period(rw.strip_label(f.message_de, r))
+                text = _strip_period(strip_label(f.message_de, r))
                 if text not in texts:
                     texts.append(text)
     for cid in sorted(by_contract):
@@ -273,7 +282,7 @@ def _intro(h: CheckedInput | None) -> str:
 
 def _plan_footnote(report: Report) -> str:
     h = report.header
-    sheets = rw.plan_sheets(report.results)
+    sheets = plan_sheets(report.results)
     text = f"Planwerte: {h.file if h and h.file else 'Wirtschaftsplan'}"
     if sheets:
         text += f" ({', '.join(sheets)})"
@@ -305,20 +314,20 @@ def result_context(
             Row(
                 contract=f"{r.contract_id} · {r.contract_name_de}",
                 covenant=r.name_de,
-                mark=rw.mark(n),
+                mark=mark(n),
                 value=value_de(r),
                 threshold=threshold_de(r),
                 headroom=minus(headroom_de(r)),
                 met=met_de(r),
                 status=_status_key(r),
-                anchor=rw.anchor(r),
+                anchor=anchor(r),
                 highlight=r.covenant_id == report.tightest,
             )
         )
-        footnotes.append(f"{rw.mark(n)} {rw.footnote(r)}")
+        footnotes.append(f"{mark(n)} {footnote(r)}")
     footnotes.append(_plan_footnote(report))
-    blocks = [rw.path_block(r, _status_key(r), tight_ratio) for r in report.results]
-    ebitda = rw.ebitda_blocks(report.results)
+    blocks = [path_block(r, _status_key(r), tight_ratio) for r in report.results]
+    ebitda = ebitda_blocks(report.results)
     links = [Link(b.anchor, f"{b.title}") for b in blocks]
     links += [Link(e.anchor, e.title) for e in ebitda]
     return Context(
@@ -443,122 +452,38 @@ def error_context(*, inbound: InboundMessage, run_id: str) -> Context:
     )
 
 
-# ── Plain-text helpers for the template ──────────────────────────────────────
-
-
-def _text_table(headers: list[str], rows: list[Row]) -> str:
-    from finn.plan.render import text_table
-
-    cells = [
-        [
-            f"{r.contract.replace(' · ', ' ', 1)} · {r.covenant}{r.mark}",
-            r.value,
-            r.threshold,
-            r.headroom,
-            r.met,
-        ]
-        for r in rows
-    ]
-    return "\n".join(text_table(headers, cells, max_width=70))
-
-
-_env.globals["text_table"] = _text_table
-_env.globals["path_text"] = rw.path_text
-_env.globals["ebitda_text"] = rw.ebitda_text
-
-
-# ── Polish (D21) ─────────────────────────────────────────────────────────────
-
-_NUM = re.compile(r"(?<![\w{])[-−]?\d[\d.,]*\d(?![\w}])|(?<![\w{])\d(?![\w}])")
-_PH = re.compile(r"\{\{[A-Z]+\d+\}\}")
-
-POLISH_SYSTEM = (
-    (Path(__file__).parent / "prompts" / "polish.md").read_text(encoding="utf-8").rstrip()
-)
-
-
-class PolishAnswer(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    summary: list[str]
-    notes: list[str]
-
-
-class Masker:
-    """Numbers and names → `{{N1}}` / `{{NAME1}}`; `fill` puts them back."""
-
-    def __init__(self, names: Sequence[str]) -> None:
-        self.mapping: dict[str, str] = {}
-        self.names = sorted({n for n in names if n and len(n) >= 3}, key=len, reverse=True)
-
-    def _ph(self, prefix: str, value: str) -> str:
-        for k, v in self.mapping.items():
-            if v == value and k.startswith("{{" + prefix):
-                return k
-        key = f"{{{{{prefix}{1 + sum(1 for k in self.mapping if k.startswith('{{' + prefix))}}}}}"
-        self.mapping[key] = value
-        return key
-
-    def mask(self, text: str) -> str:
-        for name in self.names:
-            text = text.replace(name, self._ph("NAME", name))
-        return _NUM.sub(lambda m: self._ph("N", m.group(0)), text)
-
-    def fill(self, text: str) -> str:
-        return _PH.sub(lambda m: self.mapping.get(m.group(0), m.group(0)), text)
-
-
-PolishRecord = Callable[[str, str, Exception | None, BaseModel | None], None]
-
-
-def polish(
-    ctx: Context,
-    names: Sequence[str],
-    *,
-    trace_id: str | None = None,
-    session_id: str | None = None,
-    record: PolishRecord | None = None,
-) -> tuple[Context, list[Finding]]:
-    """LLM rewrite of summary + notes; returns the (possibly) polished context and REPLY_* notes.
-    Any problem → the template context unchanged."""
-    if not ctx.summary:
-        return ctx, []
-    masker = Masker(names)
-    summary = [masker.mask(s) for s in ctx.summary]
-    notes = [masker.mask(n) for n in ctx.notes]
-    user = "Zusammenfassung:\n" + "\n".join(f"- {s}" for s in summary)
-    user += "\n\nHinweise:\n" + "\n".join(f"- {n}" for n in notes)
-    try:
-        answer = client.complete_structured(
-            system=POLISH_SYSTEM,
-            user=user,
-            schema=PolishAnswer,
-            purpose="reply_polish",
-            trace_id=trace_id,
-            session_id=session_id,
+def context_for(
+    inp: RenderInput, *, run_id: str, tight_ratio: Decimal, wait_days: float
+) -> Context:
+    """The template context for the reply kind (result, ask, block, other, error)."""
+    if inp.kind == "result":
+        assert inp.report is not None
+        return result_context(
+            inp.report,
+            inbound=inp.reply_to,
+            extra_findings=inp.findings,
+            run_id=run_id,
+            tight_ratio=tight_ratio,
         )
-    except client.LLMUnavailable as exc:
-        if record:
-            record(POLISH_SYSTEM, user, exc, None)
-        return ctx, [finding(ErrorCode.REPLY_LLM_UNAVAILABLE)]
-    if record:
-        record(POLISH_SYSTEM, user, None, answer)
-    # Paragraph by paragraph: the same placeholders (facts) in, the same out.
-    pairs = zip([*summary, *notes], [*answer.summary, *answer.notes], strict=False)
-    if (
-        len(answer.summary) != len(summary)
-        or len(answer.notes) != len(notes)
-        or any(set(_PH.findall(a)) != set(_PH.findall(b)) for a, b in pairs)
-    ):
-        return ctx, [finding(ErrorCode.REPLY_NUMBER_MISMATCH, numbers="Platzhalter verändert")]
-    new_summary = [masker.fill(s) for s in answer.summary]
-    new_notes = [masker.fill(n) for n in answer.notes]
-    allowed = allowed_values([*ctx.summary, *ctx.notes])
-    bad = [t for text in [*new_summary, *new_notes] for t in unknown_numbers(text, allowed)]
-    if bad:
-        return ctx, [finding(ErrorCode.REPLY_NUMBER_MISMATCH, numbers=", ".join(bad[:5]))]
-    polished = Context(**{**ctx.as_dict(), "summary": new_summary, "notes": new_notes})
-    return polished, []
+    if inp.kind == "ask":
+        return ask_context(inp.findings, inbound=inp.reply_to, run_id=run_id, wait_days=wait_days)
+    if inp.kind == "block":
+        return block_context(
+            inp.findings,
+            inbound=inp.reply_to,
+            run_id=run_id,
+            file=inp.file,
+            header=inp.header,
+            wait_days=wait_days,
+        )
+    if inp.kind == "other":
+        return other_context(inbound=inp.reply_to, run_id=run_id, question=inp.question)
+    return error_context(inbound=inp.reply_to, run_id=run_id)
+
+
+_env.globals["text_table"] = result_table
+_env.globals["path_text"] = path_text
+_env.globals["ebitda_text"] = ebitda_text
 
 
 # ── Draft ────────────────────────────────────────────────────────────────────
@@ -597,14 +522,3 @@ def draft(
         notes=[f"{f.code}: {f.message_de}" for f in notes],
         run_id=ctx.run_id,
     )
-
-
-def names_for_masking(report: Report, inbound: InboundMessage) -> list[str]:
-    names: list[str] = []
-    if report.header and report.header.company:
-        names.append(report.header.company)
-    if inbound.from_name:
-        names.append(inbound.from_name)
-    for r in report.results:
-        names += [r.contract_name_de, r.name_de]
-    return names

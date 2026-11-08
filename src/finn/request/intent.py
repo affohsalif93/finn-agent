@@ -7,10 +7,9 @@
 """
 
 import re
-from collections.abc import Callable, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
@@ -38,7 +37,7 @@ class IntentAnswer(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    intent: Literal["covenant_check", "follow_up_input", "question_about_result", "other"]
+    intent: Intent
     plan_year: int | None
     contract_ids: list[str]
     confidence: float
@@ -51,9 +50,6 @@ class ContractInfo:
     contract_id: str
     name_de: str
     has_covenants: bool
-
-
-LLMCall = Callable[[str, str, Exception | None, BaseModel | None], None]
 
 
 def thread_text(thread: Sequence[ParsedMessage]) -> str:
@@ -74,7 +70,7 @@ def classify(
     *,
     trace_id: str | None = None,
     session_id: str | None = None,
-    record: LLMCall | None = None,
+    record: client.Recorder | None = None,
 ) -> Request:
     contract_list = "\n".join(
         f"- {c.contract_id}: {c.name_de}{'' if c.has_covenants else ' (keine Covenants)'}"

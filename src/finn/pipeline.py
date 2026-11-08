@@ -18,6 +18,7 @@ from finn.calc import engine
 from finn.config import Settings
 from finn.contracts.store import load_profiles
 from finn.errors import ErrorCode, Finding, Severity, stopping
+from finn.llm.client import Recorder
 from finn.llm.redact import Pseudonyms, clean_body
 from finn.mail import gate
 from finn.mail.connector import MailConnector
@@ -39,13 +40,14 @@ from finn.models.run import (
     FailureInput,
     ParseInput,
     PlanInput,
+    PlanReadResult,
     RenderInput,
     SendInput,
 )
 from finn.plan import read_plan
 from finn.plan.checks import check_plan_year
-from finn.plan.reader import PlanReadResult
-from finn.reply import render as reply
+from finn.reply import render
+from finn.reply.polish import names_for_masking, polish
 from finn.request import intent
 
 log = structlog.get_logger(__name__)
@@ -56,7 +58,7 @@ _FORWARD = ("wg:", "fw:", "fwd:", "wtr:")
 # ── helpers ──────────────────────────────────────────────────────────────────
 
 
-def _recorder(run_dir: str) -> intent.LLMCall:
+def _recorder(run_dir: str) -> Recorder:
     """LLM call log (`llm_calls.jsonl`): prompts are already pseudonymised / masked."""
 
     def record(system: str, user: str, error: Exception | None, answer: BaseModel | None) -> None:
@@ -207,47 +209,24 @@ def render_reply(inp: RenderInput, settings: Settings) -> ReplyDraft:
     run_id = runs.run_id(inp.run_dir)
     notes: list[Finding] = []
     used_template = True
-    if inp.kind == "result":
+    ctx = render.context_for(
+        inp,
+        run_id=run_id,
+        tight_ratio=settings.tight_headroom_ratio,
+        wait_days=settings.wait_for_input_days,
+    )
+    if inp.kind == "result" and settings.reply_llm_polish:
         assert inp.report is not None
-        ctx = reply.result_context(
-            inp.report,
-            inbound=inp.reply_to,
-            extra_findings=inp.findings,
-            run_id=run_id,
-            tight_ratio=settings.tight_headroom_ratio,
+        polished, notes = polish(
+            ctx,
+            names_for_masking(inp.report, inp.reply_to),
+            trace_id=inp.workflow_id,
+            session_id=inp.session_id,
+            record=_recorder(inp.run_dir),
         )
-        if settings.reply_llm_polish:
-            masker_names = reply.names_for_masking(inp.report, inp.reply_to)
-            polished, notes = reply.polish(
-                ctx,
-                masker_names,
-                trace_id=inp.workflow_id,
-                session_id=inp.session_id,
-                record=_recorder(inp.run_dir),
-            )
-            used_template = polished is ctx
-            ctx = polished
-    elif inp.kind == "ask":
-        ctx = reply.ask_context(
-            inp.findings,
-            inbound=inp.reply_to,
-            run_id=run_id,
-            wait_days=settings.wait_for_input_days,
-        )
-    elif inp.kind == "block":
-        ctx = reply.block_context(
-            inp.findings,
-            inbound=inp.reply_to,
-            run_id=run_id,
-            file=inp.file,
-            header=inp.header,
-            wait_days=settings.wait_for_input_days,
-        )
-    elif inp.kind == "other":
-        ctx = reply.other_context(inbound=inp.reply_to, run_id=run_id, question=inp.question)
-    else:
-        ctx = reply.error_context(inbound=inp.reply_to, run_id=run_id)
-    draft = reply.draft(
+        used_template = polished is ctx
+        ctx = polished
+    draft = render.draft(
         ctx,
         inbound=inp.reply_to,
         workflow_id=inp.workflow_id,

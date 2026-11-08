@@ -14,6 +14,7 @@ and token usage.
 
 import re
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from functools import lru_cache
 from typing import Any
@@ -29,6 +30,10 @@ log = structlog.get_logger(__name__)
 # Reasoning model families reject `temperature`; for them it is not sent (determinism comes from
 # the schema and the review, not from sampling settings).
 _NO_TEMPERATURE = re.compile(r"^(o\d|gpt-5|gpt-6)")
+
+
+# Records one LLM call: (system, user, error or None, answer or None) — e.g. into the run folder.
+Recorder = Callable[[str, str, Exception | None, BaseModel | None], None]
 
 
 class LLMUnavailable(Exception):

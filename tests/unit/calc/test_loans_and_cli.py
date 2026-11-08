@@ -7,7 +7,8 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from finn.calc.engine import calculate, match_loans
+from finn.calc.engine import calculate
+from finn.calc.loan_checks import match_loans
 from finn.cli import app
 from finn.errors import ErrorCode
 from finn.models.contract import ContractProfile

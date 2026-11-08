@@ -18,9 +18,9 @@ from finn.llm import client
 from finn.mail.parse import inbound_from_bytes
 from finn.models.result import Report
 from finn.plan import read_plan
-from finn.reply import render
+from finn.reply import polish, render
 from finn.reply.number_check import allowed_values, numbers_in, unknown_numbers
-from finn.reply.render import PolishAnswer
+from finn.reply.polish import PolishAnswer
 from mailkit import (
     FINN,
     GOLD_PROFILES,
@@ -288,8 +288,8 @@ def test_polish_accepted(report: Report, inbound, monkeypatch: pytest.MonkeyPatc
 
     _polish_with(monkeypatch, rewrite)
     ctx, _ = _result(report, inbound)
-    names = render.names_for_masking(report, inbound)
-    polished, notes = render.polish(ctx, names)
+    names = polish.names_for_masking(report, inbound)
+    polished, notes = polish.polish(ctx, names)
     assert notes == []
     assert polished is not ctx
     assert polished.summary[0].startswith("Kurz: Auf Basis des Plans werden alle 4")
@@ -311,7 +311,7 @@ def test_polish_with_new_number_falls_back(  # type: ignore[no-untyped-def]
 
     _polish_with(monkeypatch, rewrite)
     ctx, _ = _result(report, inbound)
-    polished, notes = render.polish(ctx, render.names_for_masking(report, inbound))
+    polished, notes = polish.polish(ctx, polish.names_for_masking(report, inbound))
     assert polished is ctx
     assert [n.code for n in notes] == [ErrorCode.REPLY_NUMBER_MISMATCH]
     assert "4,2" in notes[0].message_de
@@ -325,13 +325,13 @@ def test_polish_dropping_a_placeholder_falls_back(  # type: ignore[no-untyped-de
 
     _polish_with(monkeypatch, rewrite)
     ctx, _ = _result(report, inbound)
-    polished, notes = render.polish(ctx, render.names_for_masking(report, inbound))
+    polished, notes = polish.polish(ctx, polish.names_for_masking(report, inbound))
     assert polished is ctx
     assert [n.code for n in notes] == [ErrorCode.REPLY_NUMBER_MISMATCH]
 
 
 def test_polish_llm_unavailable(report: Report, inbound) -> None:  # type: ignore[no-untyped-def]
     ctx, _ = _result(report, inbound)
-    polished, notes = render.polish(ctx, render.names_for_masking(report, inbound))
+    polished, notes = polish.polish(ctx, polish.names_for_masking(report, inbound))
     assert polished is ctx
     assert [n.code for n in notes] == [ErrorCode.REPLY_LLM_UNAVAILABLE]

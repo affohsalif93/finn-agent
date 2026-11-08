@@ -7,7 +7,7 @@ import pytest
 
 from finn.config import get_settings
 from finn.llm import client
-from finn.reply.render import PolishAnswer
+from finn.reply.polish import PolishAnswer
 from finn.request.intent import IntentAnswer
 
 

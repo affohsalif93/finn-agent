@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Literal
 
+from finn.calc.rounding import round_half_up
 from finn.models.contract import Component, ContractProfile, Covenant, IfMissing, Unmapped
 from finn.models.plan import (
     CellRef,
@@ -99,6 +100,15 @@ def evaluate(profile: ContractProfile, cov: Covenant, inputs: Inputs) -> Evaluat
     out.numerator, out.denominator = num, den
     out.unmapped = [*out.unmapped, *cov.unmapped_components]
     return out
+
+
+def evaluate_rounded(
+    profile: ContractProfile, cov: Covenant, inputs: Inputs, decimals: int
+) -> tuple[Decimal | None, Evaluation]:
+    """`evaluate` plus the covenant value rounded half up (None: value not defined)."""
+    ev = evaluate(profile, cov, inputs)
+    raw = ev.raw(cov.unit)
+    return (None if raw is None else round_half_up(raw, decimals)), ev
 
 
 class _Evaluator:
