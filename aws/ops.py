@@ -1,23 +1,16 @@
-"""Operate the FinnDemo instance via SSM Run Command (no SSH, no inbound port).
-
-    uv run --no-project python aws/ops.py status            compose ps + last poller/worker logs
-    uv run --no-project python aws/ops.py logs [SERVICE] [--tail N]
-    uv run --no-project python aws/ops.py redeploy          fetch current asset + .env, rebuild
-    uv run --no-project python aws/ops.py run "COMMAND"     any shell command (as root, /opt/finn)
-
-Wrappers: aws/status|logs|redeploy(.sh|.ps1). Stdlib only; uses the AWS CLI login.
-"""
+"""Operate the FinnDemo instance via SSM Run Command (no SSH, no inbound port); stdlib only.
+`uv run --no-project python aws/ops.py status | logs [SERVICE] [--tail N] | redeploy | run "CMD"`
+(wrappers: aws/status|logs|redeploy .sh/.ps1); uses the AWS CLI login."""
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 import time
 from typing import Any
 
-STACK = "FinnDemo"
-REGION = "eu-central-1"
-APP_DIR = "/opt/finn"
+from demo_config import APP_DIR, REGION, STACK
 
 
 def aws(*args: str) -> dict[str, Any]:
@@ -27,6 +20,8 @@ def aws(*args: str) -> dict[str, Any]:
         text=True,
         encoding="utf-8",
         check=False,
+        # The CLI's bundled Python would otherwise write the console code page on Windows.
+        env={**os.environ, "PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8"},
     )
     if result.returncode != 0:
         raise RuntimeError(result.stderr.strip())

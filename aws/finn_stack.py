@@ -1,12 +1,6 @@
-"""Stack FinnDemo: one EC2 instance that runs Finn's compose stack (ARCHITECTURE §13.4).
-
-Only outbound connections: no inbound rule, no SSH key; access via SSM Session Manager.
-Code: an S3 asset of the repo; its URL lives in the (non-secret) SSM parameter ASSET_URL_PARAM.
-Secrets: the SecureString ENV_PARAM is written by `put_env.py`, never by CDK, so no secret value
-ever enters CloudFormation; the stack only grants read access to it by name.
-Redeploy: a changed asset updates ASSET_URL_PARAM and an SSM Run Command (custom resource) runs
-`finn-deploy` on the instance; the instance itself is not replaced.
-"""
+"""Stack FinnDemo: one EC2 instance running Finn's compose stack; outbound only, access via SSM.
+Code comes as an S3 asset; the .env is a SecureString CDK never writes (only grants read access);
+a changed asset triggers `finn-deploy` via SSM Run Command, the instance is not replaced."""
 
 from pathlib import Path
 from typing import Any
@@ -27,14 +21,12 @@ from aws_cdk import aws_s3_assets as s3_assets
 from aws_cdk import aws_ssm as ssm
 from aws_cdk import custom_resources as cr
 from constructs import Construct
+from demo_config import APP_DIR, ASSET_URL_PARAM, ENV_PARAM
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-ENV_PARAM = "/finn/demo/env"  # SecureString, created by put_env.py
-ASSET_URL_PARAM = "/finn/demo/asset-url"  # String, created by this stack
 UBUNTU_AMI_PARAM = (
     "/aws/service/canonical/ubuntu/server/24.04/stable/current/amd64/hvm/ebs-gp3/ami-id"
 )
-APP_DIR = "/opt/finn"
 LOG_FILE = "/var/log/finn-bootstrap.log"
 
 # Glob patterns (gitignore-like) for the code asset. Secrets, runtime data, caches and

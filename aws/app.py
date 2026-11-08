@@ -3,6 +3,7 @@
 import os
 
 import aws_cdk as cdk
+from demo_config import REGION, STACK
 from finn_stack import FinnDemoStack
 
 app = cdk.App()
@@ -11,8 +12,8 @@ app = cdk.App()
 account = os.environ.get("CDK_DEFAULT_ACCOUNT")
 FinnDemoStack(
     app,
-    "FinnDemo",
-    env=cdk.Environment(account=account, region="eu-central-1"),
+    STACK,
+    env=cdk.Environment(account=account, region=REGION),
     pin_ami=account is not None,
     description="Finn demo: EC2 t3.small running the compose stack (outbound only, SSM access)",
 )

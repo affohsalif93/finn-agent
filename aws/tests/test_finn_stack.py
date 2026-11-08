@@ -202,3 +202,18 @@ def test_asset_has_code_and_no_secrets(synth: tuple[Template, Path]) -> None:
     forbidden_prefixes = (".git/", ".venv/", "runs/", "runs-testmail/", "out/", "aws/", "tests/")
     assert not [f for f in files if f.startswith(forbidden_prefixes)]
     assert not [f for f in files if "__pycache__" in f or ("/." in f and "cache" in f)]
+
+
+def test_logical_ids_are_stable(template: Template) -> None:
+    """A changed logical ID replaces the resource. The instance ID also hashes the user data
+    (`user_data_causes_replacement`): if this fails, the next deploy replaces the instance."""
+    resources = set(template.to_json()["Resources"])
+    for logical_id in [
+        "Vpc8378EB38",
+        "InstanceSg4966687D",
+        "InstanceRole3CCE2F1D",
+        "InstanceC1063A87ad0653871155ceec",
+        "AssetUrl149682C7",
+        "Redeploy7D02515F",
+    ]:
+        assert logical_id in resources, logical_id

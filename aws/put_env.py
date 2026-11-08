@@ -1,11 +1,6 @@
-"""Store the local .env as ONE SSM SecureString (/finn/demo/env) in eu-central-1.
-
-    uv run --no-project python aws/put_env.py [--env-file .env]
-
-Never prints values: only the key names, the size and the parameter version. Uses the AWS CLI
-(same login as `cdk`). The instance reads the parameter on every (re)deploy; after a change run
-`aws/redeploy` to apply it. Standard tier up to 4 KB, Advanced (paid) only above.
-"""
+"""Store the local .env as ONE SSM SecureString (/finn/demo/env): `uv run --no-project python
+aws/put_env.py [--env-file .env]`. Prints key names and size, never values; the instance reads it
+on every (re)deploy, so run `aws/redeploy` afterwards. Standard tier up to 4 KB."""
 
 import argparse
 import json
@@ -15,14 +10,14 @@ import sys
 import tempfile
 from pathlib import Path
 
-PARAM = "/finn/demo/env"
-REGION = "eu-central-1"
+from demo_config import ENV_PARAM, REGION
+
 STANDARD_LIMIT = 4096
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser = argparse.ArgumentParser(description="Store the local .env as one SSM SecureString.")
     parser.add_argument("--env-file", type=Path, default=REPO_ROOT / ".env")
     args = parser.parse_args()
 
@@ -36,7 +31,7 @@ def main() -> int:
     ]
     size = len(text.encode("utf-8"))
     tier = "Standard" if size <= STANDARD_LIMIT else "Advanced"
-    print(f"{args.env_file.name}: {len(keys)} keys, {size} bytes -> {PARAM} ({tier}, {REGION})")
+    print(f"{args.env_file.name}: {len(keys)} keys, {size} bytes -> {ENV_PARAM} ({tier}, {REGION})")
     print("keys:", ", ".join(keys))
     if "COMPOSE_PROFILES" in keys:
         print("warning: COMPOSE_PROFILES is set; the instance starts only the default services")
@@ -49,7 +44,7 @@ def main() -> int:
         result = subprocess.run(
             [
                 "aws", "ssm", "put-parameter",
-                "--name", PARAM,
+                "--name", ENV_PARAM,
                 "--type", "SecureString",
                 "--tier", tier,
                 "--overwrite",

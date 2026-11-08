@@ -1,6 +1,6 @@
 [project]
 # Separate uv project on purpose: aws-cdk-lib (~100 MB incl. the jsii runtime) stays out of the
-# root uv.lock, the runtime image and CI. Use: `uv run --project aws ...` (ARCHITECTURE §13.4).
+# root uv.lock, the runtime image and CI. Use: `uv run --project aws ...`.
 name = "finn-aws"
 version = "0.1.0"
 description = "AWS CDK stack FinnDemo: one EC2 instance running Finn's compose stack"
